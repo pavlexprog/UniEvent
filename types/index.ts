@@ -6,11 +6,17 @@ export type Event = {
     category: 'Концерт' | 'Спорт' | 'Кино' | 'Другое';
     created_at: string;
     creator_id: number;
+    image_url?: string;
+    location: string;
+    participants: number; 
   };
   
-  export type User = {
+  export type user = {
     id: number;
     username: string;
+    email: string;
     is_admin: boolean;
     registered_events: number[];
+    avatar_url?: string;
+    created_at: string;
   };

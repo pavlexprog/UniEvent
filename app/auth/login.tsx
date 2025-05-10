@@ -26,6 +26,7 @@ export default function LoginScreen() {
 
 
   const handleLogin = async () => {
+    console.log("Logging in...");
     if (!validate()) return;
 
     setLoading(true);
