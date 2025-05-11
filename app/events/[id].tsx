@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, ActivityIndicator, Alert, View } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Image,
+  TouchableOpacity,
+  Dimensions,
+  SafeAreaView,
+  Share,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Text, Card, Button, IconButton } from 'react-native-paper';
 import { api } from '../../lib/api';
 import { Event } from '../../types';
 import { BASE_URL } from '../../lib/config';
-import { MotiView } from 'moti';
+import { MaterialIcons } from '@expo/vector-icons';
+
+const screenWidth = Dimensions.get('window').width;
 
 type EventWithJoined = Event & { joined?: boolean };
 
@@ -25,10 +37,9 @@ export default function EventDetailScreen() {
       try {
         const res = await api.get(`/events/${id}`);
         setEvent(res.data);
-
         if (res.data.joined) setAlreadyJoined(true);
-      } catch (error) {
-        console.error('Ошибка при получении мероприятия', error);
+      } catch (err) {
+        console.error(err);
         Alert.alert('Ошибка', 'Не удалось загрузить мероприятие');
       } finally {
         setLoading(false);
@@ -52,6 +63,17 @@ export default function EventDetailScreen() {
     }
   };
 
+  const handleShare = async () => {
+    if (!event) return;
+    try {
+      await Share.share({
+        message: `Приглашаю на мероприятие "${event.title}" — ${event.description}`,
+      });
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось поделиться');
+    }
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -63,46 +85,149 @@ export default function EventDetailScreen() {
   if (!event) {
     return (
       <View style={{ padding: 16 }}>
-        <Text variant="titleMedium">Мероприятие не найдено</Text>
+        <Text style={{ fontSize: 18 }}>Мероприятие не найдено</Text>
       </View>
     );
   }
 
-  return (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <IconButton icon="arrow-left" onPress={() => router.back()} />
+  const eventImage = event.image_url ? `${BASE_URL}${event.image_url}` : null;
 
-      <MotiView
-        from={{ opacity: 0, translateY: 20 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 500 }}
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* Верхняя панель */}
+      <View
+        style={{
+          height: 56,
+          backgroundColor: '#fff',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 12,
+          borderBottomWidth: 1,
+          borderColor: '#eee',
+        }}
       >
-        <Card style={{ borderRadius: 12, overflow: 'hidden' }}>
-          {event.image_url && (
-            <Card.Cover source={{ uri: `${BASE_URL}${event.image_url}` }} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={24} />
+        </TouchableOpacity>
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={{ fontSize: 18, fontWeight: '500', flex: 1, textAlign: 'center', marginHorizontal: 12 }}
+        >
+          {event.title}
+        </Text>
+        <TouchableOpacity onPress={handleShare}>
+          <MaterialIcons name="share" size={22} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Картинка мероприятия */}
+        <View>
+          {eventImage ? (
+            <Image
+              source={{ uri: eventImage }}
+              style={{ width: screenWidth, height: 240 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={{
+                width: screenWidth,
+                height: 240,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#f0f0f0',
+              }}
+            >
+              <MaterialIcons name="event" size={72} color="#bbb" />
+            </View>
           )}
 
-          <Card.Title title={event.title} subtitle={`Категория: ${event.category}`} />
+          {/* Звезда */}
+          <TouchableOpacity
+            style={{
+              position: 'absolute',
+              top: 200,
+              right: 16,
+              backgroundColor: '#fff',
+              borderRadius: 20,
+              padding: 6,
+              elevation: 3,
+            }}
+            onPress={() => {}}
+          >
+            <MaterialIcons name="star-border" size={24} color="gold" />
+          </TouchableOpacity>
+        </View>
 
-          <Card.Content style={{ gap: 8, marginBottom: 12 }}>
-            <Text style={{ fontSize: 16 }}>{event.description}</Text>
-            <Text>📍 {event.location || 'Место не указано'}</Text>
-            <Text>🗓 {new Date(event.event_date).toLocaleString()}</Text>
-            <Text>👥 Участников: {event.participants || 0}</Text>
-          </Card.Content>
+        {/* Информация о мероприятии */}
+        <View style={{ padding: 16 }}>
+          <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 8 }}>{event.title}</Text>
 
-          <Card.Actions>
-            <Button
-              mode={alreadyJoined ? 'outlined' : 'contained'}
-              onPress={handleAttend}
-              disabled={alreadyJoined || attending}
-              loading={attending}
-            >
-              {alreadyJoined ? 'Вы уже записались' : 'Я пойду'}
-            </Button>
-          </Card.Actions>
-        </Card>
-      </MotiView>
-    </ScrollView>
+          <Text style={{ fontSize: 16, color: '#666', marginBottom: 4 }}>
+            🗓 {new Date(event.event_date).toLocaleString('ru-RU', {
+              day: 'numeric',
+              month: 'long',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+
+          <Text style={{ fontSize: 16, marginBottom: 4 }}>{event.category}</Text>
+
+          <Text style={{ fontSize: 16, marginBottom: 12 }}>
+            👥 Участников: {event.participants ?? 0}
+          </Text>
+
+          <Text style={{ fontSize: 16, lineHeight: 22, color: '#444' }}>{event.description}</Text>
+        </View>
+      </ScrollView>
+
+      {/* Нижняя кнопка */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          left: 16,
+          right: 16,
+          zIndex: 10,
+        }}
+      >
+        {!alreadyJoined ? (
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#2e7d32',
+              borderRadius: 10,
+              paddingVertical: 14,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+            onPress={handleAttend}
+            disabled={attending}
+          >
+            <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+              {attending ? 'Запись...' : 'Я пойду'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={{
+              paddingVertical: 14,
+              alignItems: 'center',
+              backgroundColor: '#f0f0f0',
+              borderRadius: 10,
+            }}
+          >
+            <Text style={{ color: '#666' }}>Вы уже записались</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }

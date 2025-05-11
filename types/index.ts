@@ -9,6 +9,9 @@ export type Event = {
     image_url?: string;
     location: string;
     participants: number; 
+    //status: 'pending' | 'approved' | 'rejected';
+    is_approved: boolean;
+    is_favorite?: boolean;
   };
   
   export type user = {
