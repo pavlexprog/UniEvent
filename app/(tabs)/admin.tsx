@@ -61,7 +61,7 @@ export default function AdminEventsScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <Text variant="titleLarge" style={{ marginBottom: 12 }}>Все мероприятия</Text>
+     
       {events.map(event => (
        <EventCard
        key={event.id}

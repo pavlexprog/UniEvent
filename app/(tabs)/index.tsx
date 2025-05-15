@@ -21,10 +21,6 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState<'date' | 'popularity'>('date');
   const categories = ['Все', 'Музыка', 'Спорт', 'Образование'];
   const [selectedCategory, setSelectedCategory] = useState('Все');
-  const handleLogout = async () => {
-    await SecureStore.deleteItemAsync('token');
-    router.replace('/auth/login');
-  };
 
   const loadEvents = async () => {
     try {
@@ -88,10 +84,6 @@ export default function HomeScreen() {
         contentContainerStyle={{ padding: 16 }}
         ListHeaderComponent={
           <>
-            <Button mode="outlined" onPress={handleLogout}>
-              Выйти
-            </Button>
-  
             <EventSearchBar
               searchValue={search}
               onSearchChange={setSearch}

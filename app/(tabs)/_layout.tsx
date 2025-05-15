@@ -14,24 +14,8 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="profile/profile"
-        options={{
-          title: 'Профиль',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" color={color} size={size} />
-          ),
-        }}
-      />
-       <Tabs.Screen
-        name="admin"
-        options={{
-          title: 'Модерация',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="alert-circle-outline" color={color} size={size} />
-          ),
-        }}
-      />
+     
+       
          <Tabs.Screen
         name="create-event"
         options={{
@@ -41,6 +25,25 @@ export default function TabsLayout() {
           ),
         }}
       />
+       <Tabs.Screen
+        name="profile/profile"
+        options={{
+          title: 'Профиль',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Модерация',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="alert-circle-outline" color={color} size={size} />
+          ),
+        }}
+      />
     </Tabs>
+    
   );
 }

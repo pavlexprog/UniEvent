@@ -29,6 +29,35 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [alreadyJoined, setAlreadyJoined] = useState(false);
+  const [otherEvents, setOtherEvents] = useState<Event[]>([]);
+
+useEffect(() => {
+  if (!id || Array.isArray(id)) return;
+
+  const fetchEvent = async () => {
+    try {
+      const res = await api.get(`/events/${id}`);
+      setEvent(res.data);
+      if (res.data.joined) setAlreadyJoined(true);
+
+      // Загружаем другие мероприятия организатора
+      if (res.data.creator?.id) {
+        const other = await api.get(`/events?creator_id=${res.data.creator.id}&limit=3`);
+        setOtherEvents(other.data.filter((e: Event) => e.id !== Number(id)));
+      }
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Ошибка', 'Не удалось загрузить мероприятие');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchEvent();
+}, [id]);
+ 
+
 
   useEffect(() => {
     if (!id || Array.isArray(id)) return;
@@ -36,6 +65,7 @@ export default function EventDetailScreen() {
     const fetchEvent = async () => {
       try {
         const res = await api.get(`/events/${id}`);
+        console.log('Event data:', res.data);
         setEvent(res.data);
         if (res.data.joined) setAlreadyJoined(true);
       } catch (err) {
@@ -165,7 +195,7 @@ export default function EventDetailScreen() {
         {/* Информация о мероприятии */}
         <View style={{ padding: 16 }}>
           <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 8 }}>{event.title}</Text>
-
+          
           <Text style={{ fontSize: 16, color: '#666', marginBottom: 4 }}>
             🗓 {new Date(event.event_date).toLocaleString('ru-RU', {
               day: 'numeric',
@@ -181,10 +211,83 @@ export default function EventDetailScreen() {
             👥 Участников: {event.participants ?? 0}
           </Text>
 
-          <Text style={{ fontSize: 16, lineHeight: 22, color: '#444' }}>{event.description}</Text>
+       
+          <View style={{ marginTop: 4, borderTopWidth: 1, borderColor: '#eee', paddingTop: 16 }}>
+  <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Описание</Text>
+  <Text style={{ fontSize: 16, lineHeight: 22, color: '#444' }}>
+    {event.description}
+  </Text>
+</View>
         </View>
-      </ScrollView>
 
+        {event.creator && (
+        <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+    <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Организатор</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Image
+        source={{ uri: event.creator.avatar_url ? `${BASE_URL}${event.creator.avatar_url}` : 'https://via.placeholder.com/100' }}
+        style={{ width: 60, height: 60, borderRadius: 30, marginRight: 12 }}
+      />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 16, fontWeight: '500' }}>
+          {event.creator.first_name} {event.creator.last_name}
+        </Text>
+        <Text style={{ color: '#666' }}>Мероприятий: {event.creator.total_events ?? 0}</Text>
+        <TouchableOpacity
+          onPress={() => Alert.alert('Добавлено', 'Вы добавили в друзья')}
+          style={{
+            marginTop: 6,
+            paddingVertical: 6,
+            paddingHorizontal: 12,
+            borderWidth: 1,
+            borderColor: '#ccc',
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ fontSize: 14 }}>Добавить в друзья</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+)}
+
+{otherEvents.length > 0 && (
+  <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+    <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>Другие мероприятия</Text>
+    {otherEvents.map((e) => (
+      <TouchableOpacity
+        key={e.id}
+        onPress={() => router.push(`/events/${e.id}`)}
+        style={{
+          flexDirection: 'row',
+          marginBottom: 12,
+          backgroundColor: '#f8f8f8',
+          borderRadius: 10,
+          overflow: 'hidden',
+        }}
+      >
+        <Image
+          source={{ uri: e.image_url ? `${BASE_URL}${e.image_url}` : 'https://via.placeholder.com/150' }}
+          style={{ width: 100, height: 80 }}
+        />
+        <View style={{ flex: 1, padding: 8 }}>
+          <Text style={{ fontWeight: '600', marginBottom: 4 }}>{e.title}</Text>
+          <Text style={{ color: '#666' }}>
+            {new Date(e.event_date).toLocaleDateString('ru-RU', {
+              day: 'numeric', month: 'long',
+              hour: '2-digit', minute: '2-digit'
+            })}
+          </Text>
+          <Text style={{ fontSize: 12, color: '#999' }}>{e.location}</Text>
+        </View>
+      </TouchableOpacity>
+    ))}
+  </View>
+)}
+      </ScrollView>
+     
+      
+     
       {/* Нижняя кнопка */}
       <View
         style={{

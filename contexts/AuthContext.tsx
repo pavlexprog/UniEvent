@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { authStorage } from '../lib/authStorage';
-import { user as User } from '../types';
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +10,11 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
+  avatarUri: string | null;
+  updateAvatarUri: (uri: string) => void;
+  
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,9 +24,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initializing, setInitializing] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  const [avatarUriOverride, setAvatarUriOverride] = useState<string | null>(null);
+  const avatarUri = avatarUriOverride ?? (user?.avatar_url ? `${user.avatar_url}` : null);
+  const updateAvatarUri = (uri: string) => {
+    // Добавим ?t=... чтобы сбросить кэш
+    setAvatarUriOverride(`${uri}`);
+  };
+
+
   const refreshUser = async () => {
     const res = await api.get('/me');
     setUser(res.data);
+    setAvatarUriOverride(null);
   };
 
   const init = async () => {
@@ -77,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, initializing, loading, login, logout, register }}
+      value={{ user, isAuthenticated: !!user, initializing, loading, login, logout, register, refreshUser,  avatarUri, updateAvatarUri,}}
     >
       {children}
     </AuthContext.Provider>

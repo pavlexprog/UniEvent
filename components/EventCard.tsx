@@ -9,6 +9,10 @@ type Props = {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   onPressDetails?: () => void;
+  isAdmin?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onApprove?: () => void;
 };
 
 export function EventCard({

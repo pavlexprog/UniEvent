@@ -1,31 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
   Alert,
-  Platform,
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
+  Modal,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { TextInput, Button, Text, Card } from 'react-native-paper';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { TextInput, Button, Text } from 'react-native-paper';
 import { api } from '../../lib/api';
 import { useRouter } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
 import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
+import PhotoUpload from '@/components/PhotoUpload';
+import EventDateTimePicker from '@/components/EventDateTimePicker';
+import AutoResizeTextInput from '@/components/AutoResizeTextInput';
 
 export default function CreateEventScreen() {
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+
   const [date, setDate] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
-  const [image, setImage] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [images, setImages] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const { width } = Dimensions.get('window');
   const router = useRouter();
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  const [category, setCategory] = useState('');
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [description, setDescription] = useState('');
+
 
   useEffect(() => {
     const checkToken = async () => {
@@ -40,6 +55,8 @@ export default function CreateEventScreen() {
 
     checkToken();
   }, []);
+
+  
 
   if (loading) {
     return (
@@ -63,41 +80,59 @@ export default function CreateEventScreen() {
       quality: 1,
     });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const newImages = result.assets.map((asset) => asset.uri);
+      setImages((prev) => [...prev, ...newImages].slice(0, 9));
     }
   };
+
+  const openGalleryModal = (index: number) => {
+    setActiveIndex(index);
+    setShowModal(true);
+  };
+
+  const renderImage = ({ item, index }: { item: string; index: number }) => (
+    <TouchableOpacity onPress={() => openGalleryModal(index)}>
+      <Image
+        source={{ uri: item }}
+        style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8 }}
+      />
+    </TouchableOpacity>
+  );
+
 
   const handleSubmit = async () => {
     if (!title || !description || !date || !category) {
       Alert.alert('Ошибка', 'Заполните все поля');
       return;
     }
+    
 
     let imageUrl = null;
 
     try {
-      if (image) {
+      if (images.length > 0) {
+        const uri = images[0];
         const formData = new FormData();
-        const filename = image.split('/').pop();
+        const filename = uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename || '');
         const ext = match?.[1] ?? 'jpg';
         const type = `image/${ext}`;
 
         formData.append('file', {
-          uri: image,
+          uri,
           name: filename,
           type,
         } as any);
 
-        const imageUploadResponse = await api.post('/upload/upload/event_image', formData, {
+        const uploadRes = await api.post('/upload/upload/event_image', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${token}`,
           },
         });
 
-        imageUrl = imageUploadResponse.data.url;
+        imageUrl = uploadRes.data.url;
       }
 
       const payload = {
@@ -115,7 +150,13 @@ export default function CreateEventScreen() {
       });
 
       Alert.alert('Успех', 'Мероприятие отправлено на модерацию');
-      router.push('/(tabs)');
+      setTitle('');
+      setDescription('');
+      setCategory('');
+      setEventDate(null);
+      setImages([]);
+  
+      //router.push('/(tabs)');
     } catch (err) {
       console.error(err);
       Alert.alert('Ошибка', 'Не удалось создать мероприятие');
@@ -123,71 +164,187 @@ export default function CreateEventScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <Card style={{ padding: 16 }}>
-        <Text variant="titleLarge" style={{ marginBottom: 12 }}>
-          Создать мероприятие
-        </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            paddingBottom: 100,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+      <PhotoUpload images={images} setImages={setImages} />
+      <EventDateTimePicker date={eventDate} setDate={setEventDate} />
+    {/* Название мероприятия */}
+<View style={{ marginBottom: 20 }}>
+  <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 4, color: "black" }}>Название мероприятия</Text>
+  <TextInput
+    value={title}
+    onChangeText={setTitle}
+    placeholder="Например, Концерт"
+    placeholderTextColor="#999999"
+    onFocus={() => {
+      scrollRef.current?.scrollTo({ y: 250, animated: true }); // прокрутка к полю
+    }}
+    maxLength={50}
+    style={{
+      backgroundColor: '#f5f5f5',
+      padding: 14,
+      borderRadius: 12,
+      fontSize: 14,
+      height: 30,
+    }}
+  />
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+    <Text style={{ fontSize: 12, color: '#999' }}>Обязательное поле</Text>
+    <Text style={{ fontSize: 12, color: '#999' }}>{title.length}/50</Text>
+  </View>
+</View>
 
-        <TextInput
-          label="Название"
-          value={title}
-          onChangeText={setTitle}
-          style={{ marginBottom: 12 }}
-        />
-        <TextInput
-          label="Описание"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          style={{ marginBottom: 12 }}
-        />
-        <Text style={{ marginBottom: 4 }}>Категория</Text>
-        <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginBottom: 12 }}>
-          <Picker selectedValue={category} onValueChange={(itemValue) => setCategory(itemValue)}>
-            <Picker.Item label="Выберите категорию..." value="" />
-            <Picker.Item label="Концерт" value="Концерт" />
-            <Picker.Item label="Спорт" value="Спорт" />
-            <Picker.Item label="Кино" value="Кино" />
-            <Picker.Item label="Другое" value="Другое" />
-          </Picker>
-        </View>
+{/* Категория */}
+<View style={{ marginBottom: 20 }}>
+  <TouchableOpacity
+    onPress={() => setCategoryModalVisible(true)}
+    style={{
+      backgroundColor: '#f5f5f5',
+      padding: 14,
+      borderRadius: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    }}
+  >
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Ionicons name="pricetag-outline" size={18} color="green" style={{ marginRight: 8 }} />
+      <Text style={{ fontSize: 16, fontWeight: '600', color: "black"}}>Категория</Text>
+    </View>
+    <Text style={{ fontSize: 14, color: category ? '#000' : '#888' }}>
+      {category || 'Выберите категорию'}
+    </Text>
+  </TouchableOpacity>
+</View>
 
-        <TouchableOpacity onPress={handlePickImage}>
-          {image ? (
-            <Image
-              source={{ uri: image }}
-              style={{ width: '100%', height: 200, marginBottom: 12, borderRadius: 8 }}
-              resizeMode="cover"
-            />
-          ) : (
-            <Button mode="outlined" style={{ marginBottom: 12 }}>
-              Загрузить изображение
-            </Button>
-          )}
-        </TouchableOpacity>
+{/* Описание */}
+{/* <AutoResizeTextInput
+  description={description}
+  setDescription={setDescription}
+/> */}
+  <View style={{ marginBottom: 20 }}>
+      <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 4, color: 'black' }}>
+        Описание
+      </Text>
 
-        <Button onPress={() => setShowPicker(true)} style={{ marginBottom: 12 }}>
-          Выбрать дату и время
-        </Button>
-        <Text style={{ marginBottom: 12 }}>Выбрано: {date.toLocaleString()}</Text>
+      <TextInput
+  value={description}
+  onChangeText={setDescription}
+  multiline
+  mode="flat" // или "outlined", как тебе нравится
+  placeholder="Описание мероприятия"
+  placeholderTextColor="#999999"
+  cursorColor="black"
+  style={{
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    fontSize: 14,
+    height: 100,
+  }}
+  contentStyle={{
+    textAlignVertical: 'top', // теперь работает!
+    padding: 14,
+    color: 'black',
+  }}
+  maxLength={4000}
+/>
 
-        {showPicker && (
-          <DateTimePicker
-            value={date}
-            mode="datetime"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            onChange={(event, selectedDate) => {
-              setShowPicker(false);
-              if (selectedDate) setDate(selectedDate);
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+        <Text style={{ fontSize: 12, color: '#999' }}>Обязательное поле</Text>
+        <Text style={{ fontSize: 12, color: '#999' }}>{description.length}/4000</Text>
+      </View>
+    </View>
+  
+<TouchableOpacity
+  onPress={handleSubmit}
+  disabled={!title || !description || !category || !eventDate}
+  style={{
+    backgroundColor:
+      !title || !description || !category ||  !eventDate
+        ? '#ccc'
+        : '#b23cf6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginVertical: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  }}
+>
+  <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>Отправить</Text>
+
+  <Modal
+  visible={categoryModalVisible}
+  animationType="slide"
+  transparent
+  onRequestClose={() => setCategoryModalVisible(false)}
+>
+  <TouchableWithoutFeedback onPress={() => setCategoryModalVisible(false)}>
+    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{
+          backgroundColor: 'white',
+          padding: 24,
+          borderRadius: 16,
+          width: '80%',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.2,
+          shadowRadius: 8,
+          elevation: 5,
+        }}
+      >
+        <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16 }}>Выберите категорию</Text>
+
+        {['Концерт', 'Спорт', 'Кино', 'Другое'].map((category) => (
+          <TouchableOpacity
+            key={category}
+            onPress={() => {
+              setCategory(category);
+              setCategoryModalVisible(false);
             }}
-          />
-        )}
+            style={{
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              backgroundColor: category === category ? '#3c82f6' : '#f5f5f5',
+              borderRadius: 10,
+              marginBottom: 10,
+            }}
+          >
+            <Text style={{ fontSize: 16, color: category === category ? 'white' : '#000' }}>
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
 
-        <Button mode="contained" onPress={handleSubmit}>
-          Создать
-        </Button>
-      </Card>
-    </ScrollView>
+        <TouchableOpacity
+          onPress={() => setCategoryModalVisible(false)}
+          style={{ marginTop: 10, alignSelf: 'flex-end' }}
+        >
+          <Text style={{ color: '#3c82f6', fontWeight: '500' }}>Отмена</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </TouchableWithoutFeedback>
+</Modal>
+
+</TouchableOpacity>
+      </ScrollView>
+      </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
   );
 }

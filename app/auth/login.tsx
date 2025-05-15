@@ -5,6 +5,7 @@ import { TextInput, Button, Text, Card } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../../lib/api';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const router = useRouter();
-
+  const { login } = useAuthContext();
+  
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
     if (!email) newErrors.email = 'Email обязателен';
@@ -26,29 +28,15 @@ export default function LoginScreen() {
 
 
   const handleLogin = async () => {
-    console.log("Logging in...");
     if (!validate()) return;
-
+  
     setLoading(true);
     try {
-
-      const data = new URLSearchParams();
-data.append('username', email); // даже если у тебя email, нужно "username"
-data.append('password', password);
-
-       const res = await api.post('/login', data.toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-
-
-
-      await SecureStore.setItemAsync('token', res.data.access_token);
-      router.replace('/'); // вернёмся на index → он уже отправит нас в (tabs)
-    } catch (err){
-        Alert.alert('Ошибка', 'Неверный email или пароль');
-        console.error(err);
+      await login(email, password); // ВАЖНО: используем AuthContext
+      router.replace('/');
+    } catch (err) {
+      Alert.alert('Ошибка', 'Неверный email или пароль');
+      console.error(err);
     } finally {
       setLoading(false);
     }
