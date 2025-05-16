@@ -25,6 +25,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+         
        <Tabs.Screen
         name="profile/profile"
         options={{
@@ -34,7 +35,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+         <Tabs.Screen
         name="admin"
         options={{
           title: 'Модерация',
@@ -43,6 +44,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
     </Tabs>
     
   );

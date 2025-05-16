@@ -24,8 +24,8 @@ export default function HomeScreen() {
 
   const loadEvents = async () => {
     try {
-       const res = await api.get('/events?order=desc&sort_by=event_date&limit=10');
-      //const res = await api.get('/events?is_approved=true&order=desc&sort_by=event_date&limit=10');
+      //  const res = await api.get('/events?order=desc&sort_by=event_date&limit=10');
+      const res = await api.get('/events?is_approved=true&order=desc&sort_by=event_date&limit=10');
       setEvents(res.data);
     } catch (err) {
       console.error('Ошибка при загрузке мероприятий', err);

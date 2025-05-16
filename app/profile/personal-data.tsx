@@ -45,13 +45,13 @@ export default function PersonalDataScreen() {
       </View>
 
       {/* Шапка профиля с аватаром */}
-      <ProfileHeader
-   avatarUrl={avatarUri}
+ <ProfileHeader
+  avatarUrl={user.avatar_url ?? null}
   firstName={user.first_name}
   lastName={user.last_name}
   role={user.is_admin ? 'moderator' : 'user'}
   onAvatarUpdate={async () => {
-    await refreshUser(); // обновим данные из API
+    await refreshUser();
   }}
 />
 

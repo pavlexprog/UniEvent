@@ -43,12 +43,13 @@ export default function AdminEventsScreen() {
 
   const handleApprove = async (id: number) => {
     try {
-      await api.patch(`/events/${id}`, { is_approved: true });
+      await api.put(`/events/${id}`, { is_approved: true });
       setEvents(prev =>
         prev.map(e => (e.id === id ? { ...e, is_approved: true } : e))
       );
       Alert.alert('Успешно', 'Мероприятие одобрено');
-    } catch {
+    } catch (err) {
+      console.error('Ошибка при одобрении:', err);
       Alert.alert('Ошибка', 'Не удалось одобрить мероприятие');
     }
   };
