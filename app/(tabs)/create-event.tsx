@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PhotoUpload from '@/components/PhotoUpload';
 import EventDateTimePicker from '@/components/EventDateTimePicker';
 import AutoResizeTextInput from '@/components/AutoResizeTextInput';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export default function CreateEventScreen() {
   const [title, setTitle] = useState('');
@@ -40,13 +41,13 @@ export default function CreateEventScreen() {
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const [description, setDescription] = useState('');
-
+  const { user, isAuthenticated, logout } = useAuthContext();
 
   useEffect(() => {
     const checkToken = async () => {
       const savedToken = await SecureStore.getItemAsync('token');
       if (!savedToken) {
-        router.replace('/auth/login');
+        router.replace('/');
       } else {
         setToken(savedToken);
       }
@@ -55,6 +56,35 @@ export default function CreateEventScreen() {
 
     checkToken();
   }, []);
+
+
+
+  if (!isAuthenticated || !user) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+        <Text style={{ fontSize: 18, textAlign: 'center' }}>
+          Вы не вошли в аккаунт.{' '}
+          <Text
+            style={{ color: '#1e88e5' }}
+            onPress={() => router.push('/auth/login')}
+          >
+            Войдите
+          </Text>{' '}
+          или{' '}
+          <Text
+            style={{ color: '#1e88e5' }}
+            onPress={() => router.push('/auth/register')}
+          >
+            зарегистрируйтесь
+          </Text>, чтобы использовать все возможности приложения.
+        </Text>
+      </View>
+    );
+  }
+
+
+
+  
 
   
 
@@ -108,31 +138,31 @@ export default function CreateEventScreen() {
     }
     
 
-    let imageUrl = null;
-
     try {
-      if (images.length > 0) {
-        const uri = images[0];
+      let imageUrls: string[] = [];
+  
+      // Загружаем каждое изображение по очереди
+      for (const uri of images) {
         const formData = new FormData();
         const filename = uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename || '');
         const ext = match?.[1] ?? 'jpg';
         const type = `image/${ext}`;
-
+  
         formData.append('file', {
           uri,
           name: filename,
           type,
         } as any);
-
+  
         const uploadRes = await api.post('/upload/upload/event_image', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${token}`,
           },
         });
-
-        imageUrl = uploadRes.data.url;
+  
+        imageUrls.push(uploadRes.data.url);
       }
 
       const payload = {
@@ -140,7 +170,7 @@ export default function CreateEventScreen() {
         description,
         category,
         event_date: date.toISOString(),
-        image_url: imageUrl,
+        image_url: imageUrls,
       };
 
       await api.post('/events/', payload, {
@@ -228,11 +258,7 @@ export default function CreateEventScreen() {
   </TouchableOpacity>
 </View>
 
-{/* Описание */}
-{/* <AutoResizeTextInput
-  description={description}
-  setDescription={setDescription}
-/> */}
+
   <View style={{ marginBottom: 20 }}>
       <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 4, color: 'black' }}>
         Описание

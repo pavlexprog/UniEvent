@@ -8,6 +8,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import { EventCard } from '../../components/EventCard';
 import { EventSearchBar } from '../../components/EventSearchBar'
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 
 export default function HomeScreen() {
@@ -21,7 +23,10 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState<'date' | 'popularity'>('date');
   const categories = ['Все', 'Музыка', 'Спорт', 'Образование'];
   const [selectedCategory, setSelectedCategory] = useState('Все');
-
+  const insets = useSafeAreaInsets();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user, isAuthenticated} = useAuthContext();
+  
   const loadEvents = async () => {
     try {
       //  const res = await api.get('/events?order=desc&sort_by=event_date&limit=10');
@@ -33,6 +38,30 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+
+   
+    
+   
+  
+
+      const handleToggleFavorite = (eventId: number) => {
+        if (!isAuthenticated || !user) {
+          setShowAuthModal(true);
+          return;
+        }
+        toggleFavorite(eventId);
+      };
+      
+      const handlePressDetails = (eventId: number) => {
+        if (!isAuthenticated || !user) {
+          setShowAuthModal(true);
+          return;
+        }
+        router.push(`/events/${eventId}`);
+      };
+
+
 
   useEffect(() => {
     loadEvents();
@@ -73,30 +102,45 @@ export default function HomeScreen() {
 
   return (
     <>
+      <View
+    style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      paddingTop: insets.top - 8, // отступ от чёлки/статус-бара
+      paddingBottom: 0, // минимальный нижний отступ
+      backgroundColor: 'white',
+      zIndex: 10,
+      padding: 16,
+      borderBottomWidth: 1,
+      borderColor: '#ddd',
+    }}
+  >
+    <EventSearchBar
+      searchValue={search}
+      onSearchChange={setSearch}
+      onOpenFilters={() => setFiltersVisible(true)}
+    />
+  </View>
       <FlatList
         data={events.filter(event =>
           event.title.toLowerCase().includes(search.toLowerCase())
         )}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh}
+          progressViewOffset={insets.top + 80} // 👈 сдвигаем индикатор вниз
+          />
+      
         }
-        contentContainerStyle={{ padding: 16 }}
-        ListHeaderComponent={
-          <>
-            <EventSearchBar
-              searchValue={search}
-              onSearchChange={setSearch}
-              onOpenFilters={() => setFiltersVisible(true)}
-            />
-          </>
-        }
+        contentContainerStyle={{ paddingTop: insets.top + 72, paddingHorizontal: 16, paddingBottom: 32 }}
         renderItem={({ item }) => (
           <EventCard
-            event={item}
-            onToggleFavorite={() => toggleFavorite(item.id)}
-            onPressDetails={() => router.push(`/events/${item.id}`)}
-          />
+  event={item}
+  onToggleFavorite={() => handleToggleFavorite(item.id)}
+  onPressDetails={() => handlePressDetails(item.id)}
+/>
         )}
       />
   
@@ -130,6 +174,30 @@ export default function HomeScreen() {
         </View>
       </View>
     </Modal>
+    <Modal visible={showAuthModal} transparent animationType="fade">
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#00000088' }}>
+    <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 12, marginHorizontal: 20 }}>
+      <Text style={{ fontSize: 16, textAlign: 'center', marginBottom: 12 }}>
+        Вы не вошли в аккаунт.{' '}
+        <Text style={{ color: '#1e88e5' }} onPress={() => {
+          setShowAuthModal(false);
+          router.push('/auth/login');
+        }}>
+          Войдите
+        </Text>{' '}
+        или{' '}
+        <Text style={{ color: '#1e88e5' }} onPress={() => {
+          setShowAuthModal(false);
+          router.push('/auth/register');
+        }}>
+          зарегистрируйтесь
+        </Text>, чтобы использовать все возможности приложения.
+      </Text>
+      <Button onPress={() => setShowAuthModal(false)}>Закрыть</Button>
+    </View>
+  </View>
+</Modal>
+
     </>
   );
 }

@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 type Props = {
   searchValue: string;
   onSearchChange: (text: string) => void;
-  onOpenFilters: () => void;
+  onOpenFilters?: () => void;
 };
 
 export function EventSearchBar({ searchValue, onSearchChange, onOpenFilters }: Props) {
@@ -28,14 +28,17 @@ export function EventSearchBar({ searchValue, onSearchChange, onOpenFilters }: P
           placeholder="Поиск мероприятий"
           value={searchValue}
           onChangeText={onSearchChange}
-          style={{ flex: 1, marginLeft: 8, color: '#333' }}
+          style={{ flex: 1, marginLeft: 8, color: '#333', }}
           placeholderTextColor="#999"
+      
         />
       </View>
 
-      <TouchableOpacity onPress={onOpenFilters} style={{ marginLeft: 12 }}>
-        <Text style={{ color: 'green', fontSize: 16, fontWeight: '500' }}>Фильтры</Text>
-      </TouchableOpacity>
+      {onOpenFilters && (
+  <TouchableOpacity onPress={onOpenFilters} style={{ marginLeft: 12 }}>
+    <Text style={{ color: 'green', fontSize: 16, fontWeight: '500' }}>Фильтры</Text>
+  </TouchableOpacity>
+)}
     </View>
   );
 }

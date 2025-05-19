@@ -19,9 +19,11 @@ export type Event = {
   category: 'Концерт' | 'Спорт' | 'Кино' | 'Другое';
   created_at: string;
   creator: User; // ← теперь это объект User
-  image_url?: string;
+  image_url?: string[];
   location: string;
-  participants: number;
+  participants: User[];
   is_approved: boolean;
   is_favorite?: boolean;
+  participants_count: number 
+  joined?: boolean 
 };

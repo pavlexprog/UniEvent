@@ -5,6 +5,8 @@ import { BASE_URL } from '../lib/config';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import { CustomAdminMenu } from './CustomAdminMenu';
+import { Animated } from 'react-native';
+import { useEffect} from 'react';
 
 type Props = {
   event: Event;
@@ -15,6 +17,9 @@ type Props = {
   onEdit?: () => void;
   onDelete?: () => void;
   onApprove?: () => void;
+  onLongPress?: () => void;
+isSelected?: boolean;
+selectionMode?: boolean;
 };
 
 export function EventCard({
@@ -26,14 +31,45 @@ export function EventCard({
   onEdit,
   onDelete,
   onApprove,
+  onLongPress,          // <--- добавь
+  isSelected = false,   // <--- добавь (с дефолтным значением)
+  //selectionMode = false // <--- можно тоже с дефолтом
 }: Props) {
-  const imageSource = event.image_url
-    ? { uri: `${BASE_URL}${event.image_url}` }
-    : null;
+  const imageSource = Array.isArray(event.image_url) && event.image_url.length > 0
+  ? { uri: `${BASE_URL}${event.image_url[0]}` }
+  : null;
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuButtonRef = useRef<View>(null);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isSelected) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(shakeAnim, {
+            toValue: 0.5,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: -0.5,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 0,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      shakeAnim.stopAnimation();
+      shakeAnim.setValue(0);
+    }
+  }, [isSelected]);
 
   const openMenu = () => {
     if (menuButtonRef.current) {
@@ -48,18 +84,33 @@ export function EventCard({
 
   return (
     <>
-      <TouchableOpacity
-        onPress={onPressDetails}
-        style={{
-          flexDirection: 'row',
-          marginBottom: 16,
-          borderRadius: 12,
-          backgroundColor: 'white',
-          elevation: 2,
-          padding: 8,
-          alignItems: 'center',
-        }}
-      >
+    <Animated.View
+  style={{
+    transform: [
+  
+      {
+        rotate: shakeAnim.interpolate({
+          inputRange: [-1, 1],
+          outputRange: ['-1deg', '1deg'],
+        }),
+      },
+    ],
+  }}
+>
+   <TouchableOpacity
+  onPress={onPressDetails}
+  onLongPress={onLongPress}
+  style={{
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: isSelected ? '#ddd' : 'white',
+    elevation: isSelected ? 5 : 2,
+    padding: 8,
+    alignItems: 'center',
+    transform: [{ scale: isSelected ? 1.02 : 1 }],
+  }}
+>
         {/* Картинка или иконка */}
         {imageSource ? (
           <Image
@@ -131,17 +182,23 @@ export function EventCard({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <MaterialIcons name="calendar-today" size={16} color="#888" />
             <Text style={{ marginLeft: 4, color: '#666' }}>
-              {new Date(event.event_date).toLocaleString()}
+            {new Date(event.event_date).toLocaleString('ru-RU', {
+              day: 'numeric',
+              month: 'long',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
             </Text>
           </View>
 
           <Text style={{ color: '#444', marginTop: 4 }}>{event.category}</Text>
 
           <Text style={{ color: '#888', marginTop: 4 }}>
-            Участников: {event.participants ?? 0}
-          </Text>
+  {event.participants_count > 0 ? `Участников: ${event.participants_count}` : 'Пока нет участников'}
+</Text>
         </View>
       </TouchableOpacity>
+      </Animated.View>
 
       {/* Меню администратора */}
       {isAdmin && (
