@@ -98,37 +98,37 @@ export default function CreateEventScreen() {
 
   if (!token) return null;
 
-  const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Разрешение необходимо', 'Разрешите доступ к галерее');
-      return;
-    }
+  // const handlePickImage = async () => {
+  //   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //   if (!permission.granted) {
+  //     Alert.alert('Разрешение необходимо', 'Разрешите доступ к галерее');
+  //     return;
+  //   }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
+  //   const result = await ImagePicker.launchImageLibraryAsync({
+  //     mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //     quality: 1,
+  //   });
 
-    if (!result.canceled && result.assets.length > 0) {
-      const newImages = result.assets.map((asset) => asset.uri);
-      setImages((prev) => [...prev, ...newImages].slice(0, 9));
-    }
-  };
+  //   if (!result.canceled && result.assets.length > 0) {
+  //     const newImages = result.assets.map((asset) => asset.uri);
+  //     setImages((prev) => [...prev, ...newImages].slice(0, 9));
+  //   }
+  // };
 
-  const openGalleryModal = (index: number) => {
-    setActiveIndex(index);
-    setShowModal(true);
-  };
+  // const openGalleryModal = (index: number) => {
+  //   setActiveIndex(index);
+  //   setShowModal(true);
+  // };
 
-  const renderImage = ({ item, index }: { item: string; index: number }) => (
-    <TouchableOpacity onPress={() => openGalleryModal(index)}>
-      <Image
-        source={{ uri: item }}
-        style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8 }}
-      />
-    </TouchableOpacity>
-  );
+  // const renderImage = ({ item, index }: { item: string; index: number }) => (
+  //   <TouchableOpacity onPress={() => openGalleryModal(index)}>
+  //     <Image
+  //       source={{ uri: item }}
+  //       style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8 }}
+  //     />
+  //   </TouchableOpacity>
+  // );
 
 
   const handleSubmit = async () => {

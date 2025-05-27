@@ -9,6 +9,7 @@ export default function ProfileScreen() {
   const { user, isAuthenticated, logout } = useAuthContext();
   const router = useRouter();
   const { avatarUri } = useAuthContext();
+  
   if (!isAuthenticated || !user) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
@@ -61,10 +62,21 @@ export default function ProfileScreen() {
       icon: <MaterialIcons name="add-circle-outline" size={24} color="#1e88e5" />,
       onPress: () => router.push('/(tabs)/create-event'),
     },
+     ...(user?.is_admin
+    ? [
+        {
+          label: 'Модерация мероприятий',
+          icon: (
+            <Ionicons name="alert-circle-outline" size={24} color="#cc0000" />
+          ),
+          onPress: () => router.push('/admin'),
+        },
+      ]
+    : []),
     {
-      label: 'Организованные мероприятия',
+      label: 'Мои мероприятия',
       icon: <Ionicons name="calendar-outline" size={24} color="#1e88e5" />,
-      onPress: () => router.push('/events/my'),
+      onPress: () => router.push('/events/MyEventsScreen'),
     },
     {
       label: 'Предстоящие мероприятия',
@@ -76,13 +88,14 @@ export default function ProfileScreen() {
       icon: <Ionicons name="star-outline" size={24} color="#1e88e5" />,
       onPress: () => router.push('/events/favorites'),
     },
-    {
-      label: 'Уведомления',
-      icon: <Ionicons name="notifications-outline" size={24} color="#1e88e5" />,
-    },
+    // {
+    //   label: 'Уведомления',
+    //   icon: <Ionicons name="notifications-outline" size={24} color="#1e88e5" />,
+    // },
     {
       label: 'Друзья',
       icon: <FontAwesome5 name="user-friends" size={20} color="#1e88e5" />,
+       onPress: () => router.push('/profile/FriendsScreen'),
     },
     {
       label: 'Выйти из аккаунта',

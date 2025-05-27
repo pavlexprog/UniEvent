@@ -51,16 +51,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          title: 'Модерация',
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="alert-circle-outline" color={color} size={size} />
-          ),
-        }}
-      />
     </Tabs>
   );
 }

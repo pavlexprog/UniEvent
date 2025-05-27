@@ -18,8 +18,10 @@ type Props = {
   onDelete?: () => void;
   onApprove?: () => void;
   onLongPress?: () => void;
+  
 isSelected?: boolean;
 selectionMode?: boolean;
+showMenuForUserOnlyHere?: boolean;
 };
 
 export function EventCard({
@@ -31,6 +33,7 @@ export function EventCard({
   onEdit,
   onDelete,
   onApprove,
+  showMenuForUserOnlyHere = false,
   onLongPress,          // <--- добавь
   isSelected = false,   // <--- добавь (с дефолтным значением)
   //selectionMode = false // <--- можно тоже с дефолтом
@@ -169,14 +172,14 @@ export function EventCard({
               {event.title}
             </Text>
 
-            {isAdmin && (
-              <View ref={menuButtonRef}>
-                <Pressable onPress={openMenu}
-                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                  <MaterialIcons name="more-vert" size={20} color="#555" />
-                </Pressable>
-              </View>
-            )}
+{(isAdmin || showMenuForUserOnlyHere) && (
+  <View ref={menuButtonRef}>
+    <Pressable onPress={openMenu} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+      <MaterialIcons name="more-vert" size={20} color="#555" />
+    </Pressable>
+  </View>
+)}
+
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
@@ -201,25 +204,28 @@ export function EventCard({
       </Animated.View>
 
       {/* Меню администратора */}
-      {isAdmin && (
-        <CustomAdminMenu
-          visible={menuVisible}
-          onClose={() => setMenuVisible(false)}
-          top={menuPosition.top}
-          left={menuPosition.left}
-          onApprove={() => {
-            setMenuVisible(false);
-            onApprove?.();
-          }}
-          onEdit={() => {
-            setMenuVisible(false);
-            onEdit?.();
-          }}
-          onDelete={() => {
-            setMenuVisible(false);
-            onDelete?.();
-          }}
-        />
+      {(isAdmin || showMenuForUserOnlyHere) && (
+       <CustomAdminMenu
+  visible={menuVisible}
+  onClose={() => setMenuVisible(false)}
+  top={menuPosition.top}
+  left={menuPosition.left}
+  // Передавать одобрение только если событие НЕ одобрено
+  onApprove={isAdmin && event.is_approved !== true ? () => {
+  setMenuVisible(false);
+  onApprove?.();
+} : undefined}
+  // Разрешить редактировать только если НЕ одобрено
+  onEdit={event.is_approved !== true ? () => {
+    setMenuVisible(false);
+    onEdit?.();
+  } : undefined}
+  // Удаление разрешено всегда
+  onDelete={() => {
+    setMenuVisible(false);
+    onDelete?.();
+  }}
+/>
       )}
     </>
   );

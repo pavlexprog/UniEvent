@@ -8,16 +8,6 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-  top: number;
-  left: number;
-  onApprove?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-};
-
 export const CustomAdminMenu = ({
   visible,
   onClose,
@@ -26,7 +16,15 @@ export const CustomAdminMenu = ({
   onApprove,
   onEdit,
   onDelete,
-}: Props) => {
+}: {
+  visible: boolean;
+  onClose: () => void;
+  top: number;
+  left: number;
+  onApprove?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) => {
   return (
     <Modal transparent visible={visible} animationType="fade">
       <TouchableWithoutFeedback onPress={onClose}>

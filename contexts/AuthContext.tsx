@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const init = async () => {
     const token = await authStorage.getToken();
     if (token) {
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      //api.defaults.headers.common.Authorization = `Bearer ${token}`;
       try {
         await refreshUser();
       } catch {
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const token = res.data.access_token;
       await authStorage.saveToken(token);
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      //api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
       await refreshUser();
     } finally {

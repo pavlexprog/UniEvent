@@ -17,7 +17,10 @@ import { Event } from '../../types';
 import { BASE_URL } from '../../lib/config';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FlatList, Modal } from 'react-native';
-
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
+import EventOrganizerCard from '@/components/EventOrganizerCard';
 const screenWidth = Dimensions.get('window').width;
 
 type EventWithJoined = Event & { joined?: boolean };
@@ -25,25 +28,67 @@ type EventWithJoined = Event & { joined?: boolean };
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [isFavorite, setIsFavorite] = useState(false);
+  //const [isFavorite, setIsFavorite] = useState(false);
   const [event, setEvent] = useState<EventWithJoined | null>(null);
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [otherEvents, setOtherEvents] = useState<Event[]>([]);
-  
+  const [friends, setFriends] = useState<number[]>([]);
   const joined = event?.joined ?? false;
-
+  const { toggleFavorite, isFavorite, favorites, fetchFavorites} = useFavorites();
   const openFullscreen = (index: number) => setSelectedImageIndex(index);
   const closeFullscreen = () => setSelectedImageIndex(null);
 
+  const handleAddFriend = async (userId: number) => {
+  try {
+    await api.post(`/friends/${userId}/add`);
+    setFriends((prev) => [...prev, userId]);
+  } catch (error) {
+    console.error('Ошибка при добавлении в друзья:', error);
+  }
+};
+
+const handleRemoveFriend = async (userId: number) => {
+  try {
+    await api.post(`/friends/${userId}/remove`);
+    setFriends((prev) => prev.filter((id) => id !== userId));
+  } catch (error) {
+    console.error('Ошибка при удалении из друзей:', error);
+  }
+};
+
+  const handleToggleFavorite = () => {
+    if (!id || Array.isArray(id)) return;
+    toggleFavorite(Number(id));
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchFavorites();
+    }, [])
+  );
+
+  const fetchFriends = async () => {
+  try {
+    const res = await fetch(`/friends`, {
+   
+    });
+    const data = await res.json();
+    const friendIds = data.map((friend: any) => friend.id); // Преобразуем в список ID
+    setFriends(friendIds);
+  } catch (error) {
+    console.error('Ошибка при загрузке друзей:', error);
+  }
+};
+  
   const fetchEvent = async () => {
     if (!id || Array.isArray(id)) return;
   
     try {
       const res = await api.get(`/events/${id}`);
       setEvent(res.data);
-      setIsFavorite(res.data.is_favorite);
+      //setIsFavorite(res.data.is_favorite);
   
       // другие мероприятия
       if (res.data.creator?.id) {
@@ -59,24 +104,25 @@ export default function EventDetailScreen() {
   };
 
  useEffect(() => {
+  fetchFriends();
   fetchEvent();
-}, [id]);
-const handleToggleFavorite = async () => {
-  if (!id || Array.isArray(id)) return;
+}, [id, favorites]);
+// const handleToggleFavorite = async () => {
+//   if (!id || Array.isArray(id)) return;
 
-  try {
-    if (isFavorite) {
-      await api.post(`/events/${id}/unfavorite`);
-      setIsFavorite(false);
-    } else {
-      await api.post(`/events/${id}/favorite`);
-      setIsFavorite(true);
-    }
-  } catch (error) {
-    Alert.alert('Ошибка', 'Не удалось обновить избранное');
-    console.error(error);
-  }
-};
+//   try {
+//     if (isFavorite) {
+//       await api.post(`/events/${id}/unfavorite`);
+//       setIsFavorite(false);
+//     } else {
+//       await api.post(`/events/${id}/favorite`);
+//       setIsFavorite(true);
+//     }
+//   } catch (error) {
+//     Alert.alert('Ошибка', 'Не удалось обновить избранное');
+//     console.error(error);
+//   }
+// };
 
 
   const handleAttend = async () => {
@@ -143,7 +189,7 @@ const handleToggleFavorite = async () => {
     );
   }
 
-  const eventImage = event.image_url ? `${BASE_URL}${event.image_url}` : null;
+ // const eventImage = event.image_url ? `${BASE_URL}${event.image_url}` : null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -170,9 +216,11 @@ const handleToggleFavorite = async () => {
         >
           {event.title}
         </Text>
-        <TouchableOpacity onPress={handleShare}>
-          <MaterialIcons name="share" size={22} />
-        </TouchableOpacity>
+        {event.is_approved && (
+  <TouchableOpacity onPress={handleShare}>
+    <MaterialIcons name="share" size={22} />
+  </TouchableOpacity>
+)}
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
@@ -197,28 +245,30 @@ const handleToggleFavorite = async () => {
     />
 
     {/* Звезда поверх изображений */}
-    <TouchableOpacity
-      style={{
-        position: 'absolute',
-        top: 200,
-        right: 16,
-        backgroundColor: '#fff',
-        borderRadius: 28,
-        padding: 8,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      }}
-      onPress={handleToggleFavorite}
-    >
-      <MaterialIcons
-        name={isFavorite ? "star" : "star-border"}
-        size={32}
-        color="gold"
-      />
-    </TouchableOpacity>
+{event.is_approved && (
+  <TouchableOpacity
+    style={{
+      position: 'absolute',
+      top: 200,
+      right: 16,
+      backgroundColor: '#fff',
+      borderRadius: 28,
+      padding: 8,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    }}
+    onPress={handleToggleFavorite}
+  >
+    <MaterialIcons
+      name={isFavorite(Number(id)) ? "star" : "star-border"}
+      size={32}
+      color="gold"
+    />
+  </TouchableOpacity>
+)}
   </>
 ) : (
   <View
@@ -265,38 +315,17 @@ const handleToggleFavorite = async () => {
 </View>
         </View>
 
-        {event.creator && (
-        <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
-    <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Организатор</Text>
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Image
-        source={{ uri: event.creator.avatar_url ? `${BASE_URL}${event.creator.avatar_url}` : 'https://via.placeholder.com/100' }}
-        style={{ width: 60, height: 60, borderRadius: 30, marginRight: 12 }}
-      />
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 16, fontWeight: '500' }}>
-          {event.creator.first_name} {event.creator.last_name}
-        </Text>
-        <Text style={{ color: '#666' }}>Мероприятий: {event.creator.total_events ?? 0}</Text>
-        <TouchableOpacity
-          onPress={() => Alert.alert('Добавлено', 'Вы добавили в друзья')}
-          style={{
-            marginTop: 6,
-            paddingVertical: 6,
-            paddingHorizontal: 12,
-            borderWidth: 1,
-            borderColor: '#ccc',
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{ fontSize: 14 }}>Добавить в друзья</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
+{event.creator && (
+  <EventOrganizerCard
+    creator={event.creator}
+    isFriend={friends.includes(event.creator.id)}
+    onAddFriend={() => handleAddFriend(event.creator.id)}
+    onRemoveFriend={() => handleRemoveFriend(event.creator.id)}
+  />
 )}
 
-{otherEvents.length > 0 && (
+
+{otherEvents.length > 0 && event.is_approved && (
   <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
     <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>Другие мероприятия</Text>
     {otherEvents.map((e) => (
@@ -334,49 +363,51 @@ const handleToggleFavorite = async () => {
       
      
       {/* Нижняя кнопка */}
-      <View style={{ position: 'absolute', bottom: 20, left: 16, right: 16, zIndex: 10 }}>
-  {!joined ? (
-    <TouchableOpacity
-      style={{
-        backgroundColor: '#2e7d32',
-        borderRadius: 10,
-        paddingVertical: 14,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
-      }}
-      onPress={handleAttend}
-      disabled={attending}
-    >
-      <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-        {attending ? 'Запись...' : 'Я пойду'}
-      </Text>
-    </TouchableOpacity>
-  ) : (
-    <TouchableOpacity
-      style={{
-        backgroundColor: '#e53935',
-        borderRadius: 10,
-        paddingVertical: 14,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
-      }}
-      onPress={handleCancel}
-    >
-      <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-        Отменить участие
-      </Text>
-    </TouchableOpacity>
-    
-  )}
-</View>
+{event.is_approved && (
+  <View style={{ position: 'absolute', bottom: 20, left: 16, right: 16, zIndex: 10 }}>
+    {!joined ? (
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#2e7d32',
+          borderRadius: 10,
+          paddingVertical: 14,
+          alignItems: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+        onPress={handleAttend}
+        disabled={attending}
+      >
+        <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+          {attending ? 'Запись...' : 'Я пойду'}
+        </Text>
+      </TouchableOpacity>
+    ) : (
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#e53935',
+          borderRadius: 10,
+          paddingVertical: 14,
+          alignItems: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+        onPress={handleCancel}
+      >
+        <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+          Отменить участие
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+)}
+
 <Modal visible={selectedImageIndex !== null} transparent={true}>
   <View style={{ flex: 1, backgroundColor: 'black' }}>
     <FlatList
