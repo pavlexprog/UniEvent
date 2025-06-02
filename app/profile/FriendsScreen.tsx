@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { User } from '@/types';
 import EventOrganizerCard from '@/components/EventOrganizerCard'; // переименовать позже, например, в UserCard
+import UserCard from '@/components/UserCard';
 
 type Tab = 'friends' | 'incoming' | 'outgoing';
 
@@ -20,19 +21,55 @@ export default function FriendsScreen() {
     loadFriends();
   }, []);
 
+  const handleAccept = async (id: number) => {
+  try {
+    await api.post(`/friends/${id}/accept`);
+    await loadFriends();
+  } catch (err) {
+    console.error('Ошибка при принятии заявки:', err);
+  }
+};
+
+const handleCancel = async (id: number) => {
+  try {
+    await api.delete(`/friends/${id}/request`);
+    await loadFriends();
+  } catch (err) {
+    console.error('Ошибка при отмене заявки:', err);
+  }
+};
+
+const handleRemove = async (id: number) => {
+  try {
+    await api.delete(`/friends/${id}`);
+    await loadFriends();
+  } catch (err) {
+    console.error('Ошибка при удалении друга:', err);
+  }
+};
+
+
   const loadFriends = async () => {
-    try {
-      const [res1, res2, res3] = await Promise.all([
-        api.get('/friends'),               // друзья
-        api.get('/friends/incoming'),     // входящие заявки
-        api.get('/friends/outgoing'),     // исходящие
-      ]);
-      setFriends(res1.data);
-      setIncoming(res2.data);
-      setOutgoing(res3.data);
-    } catch (err) {
-      console.error('Ошибка при загрузке друзей:', err);
-    }
+try {
+  const res1 = await api.get('/friends/');
+  setFriends(res1.data);
+} catch (err) {
+  console.error('Ошибка при загрузке друзей:', err);
+}
+
+try {
+  const res2 = await api.get('/friends/incoming');
+  setIncoming(res2.data);
+} catch (err) {
+  console.error('Ошибка при загрузке входящих заявок:', err);
+}
+
+try {
+  const res3 = await api.get('/friends/outgoing');
+  setOutgoing(res3.data);
+} catch (err) {
+  console.error('Ошибка при загрузке исходящих заявок:', err);
+}
   };
 
   const getTabStyle = (t: Tab): TextStyle => ({
@@ -50,13 +87,14 @@ export default function FriendsScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item }) => (
-          <EventOrganizerCard
-            creator={item}
-            isFriend={tab === 'friends'}
-            onAddFriend={() => {}}
-            onRemoveFriend={() => {}}
-          />
-        )}
+  <UserCard
+    user={item}
+    friendshipStatus={tab}
+    onAccept={() => handleAccept(item.id)}
+    onCancelRequest={() => handleCancel(item.id)}
+    onRemoveFriend={() => handleRemove(item.id)}
+  />
+)}
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', marginTop: 32 }}>
             Список пуст

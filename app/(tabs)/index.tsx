@@ -3,9 +3,8 @@ import { View, ScrollView, FlatList, Modal, RefreshControl, TouchableOpacity } f
 import { Text, Button, ActivityIndicator, RadioButton } from 'react-native-paper';
 import { api } from '../../lib/api';
 import { useRouter } from 'expo-router';
-import { Event } from '../../types';
+import { Event, BsutEvent } from '../../types';
 import { useFocusEffect } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
 import { EventCard } from '../../components/EventCard';
 import { EventSearchBar } from '../../components/EventSearchBar'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,30 +34,67 @@ export default function HomeScreen() {
   setSelectedCategory(tempCategory);
 };
  
- const loadEvents = async () => {
+const loadEvents = async () => {
   try {
-    let url = '/events?is_approved=true';
+    if (selectedCategory === 'БелГУТ') {
+      const res = await api.get('/bsut-events');
+      const eventsArray = Object.values(res.data) as BsutEvent[];
 
-    // сортировка
-    if (sortBy === 'date') {
-      url += '&order=asc&sort_by=event_date';
-    } else if (sortBy === 'popularity') {
-      url += '&order=desc&sort_by=popularity';
+      const mappedEvents: Event[] = eventsArray.map((e, index) => ({
+        id: 10000 + index,
+        title: e.title,
+        description: '',
+        event_date: e.date,
+        category: 'БелГУТ',
+        created_at: e.date,
+        
+        creator: {
+          id: 0,
+          username: 'bsut',
+          first_name: 'БелГУТ',
+          last_name: '',
+          email: 'info@bsut.by',
+          is_admin: false,
+          avatar_url: undefined, // ✅ исправлено
+          created_at: new Date().toISOString(),
+          attended_event_ids: [],
+          registered_events: [],
+          total_events: 0,
+        },
+        image_url: [e.image],
+        location: 'БелГУТ',
+        participants: [],
+        is_approved: true,
+        participants_count: 0,
+        joined: false,
+        url: e.event_link,
+        
+      }));
+
+      setEvents(mappedEvents); // ✅ здесь используем mappedEvents
+    } else {
+      let url = '/events?is_approved=true';
+
+      if (sortBy === 'date') {
+        url += '&order=asc&sort_by=event_date';
+      } else if (sortBy === 'popularity') {
+        url += '&order=desc&sort_by=popularity';
+      }
+
+      if (selectedCategory) {
+        url += `&category=${encodeURIComponent(selectedCategory)}`;
+      }
+
+      const res = await api.get(url);
+      setEvents(res.data); // ✅ здесь — обычные события
     }
-
-    // фильтр категории
-    if (selectedCategory) {
-      url += `&category=${encodeURIComponent(selectedCategory)}`;
-    }
-
-    const res = await api.get(url);
-    setEvents(res.data);
   } catch (err) {
     console.error('Ошибка при загрузке мероприятий', err);
   } finally {
     setLoading(false);
   }
 };
+
 
   const handleToggleFavorite = (eventId: number) => {
     if (!isAuthenticated || !user) {

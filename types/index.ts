@@ -8,7 +8,13 @@ export type User = {
   created_at: string;
   first_name: string;
   last_name: string;
-  total_events: number;
+  total_events?: number;
+  mutual_friends_count?: number;
+};
+export type FriendshipStatus = 'none' | 'friends' | 'incoming' | 'outgoing';
+
+export type UserWithFriendshipStatus = User & {
+  friendship_status: FriendshipStatus;
 };
 
 export type Event = {
@@ -16,7 +22,7 @@ export type Event = {
   title: string;
   description: string;
   event_date: string;
-  category: 'Концерт' | 'Спорт' | 'Кино' | 'Другое';
+  category: 'Концерт' | 'Спорт' | 'Кино' |'БелГУТ'| 'Другое' | 'Выставка'| 'Образование'| 'Театр';
   created_at: string;
   creator: User; // ← теперь это объект User
   image_url?: string[];
@@ -26,4 +32,13 @@ export type Event = {
   is_favorite?: boolean;
   participants_count: number 
   joined?: boolean 
+  url?: string;
+};
+
+
+export type BsutEvent = {
+  title: string;
+  image: string;
+  date: string;
+  event_link: string;
 };

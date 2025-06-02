@@ -7,6 +7,7 @@ import { useRef, useState } from 'react';
 import { CustomAdminMenu } from './CustomAdminMenu';
 import { Animated } from 'react-native';
 import { useEffect} from 'react';
+import { Linking } from 'react-native';
 
 type Props = {
   event: Event;
@@ -35,12 +36,19 @@ export function EventCard({
   onApprove,
   showMenuForUserOnlyHere = false,
   onLongPress,          // <--- добавь
-  isSelected = false,   // <--- добавь (с дефолтным значением)
+  isSelected = false,
+     // <--- добавь (с дефолтным значением)
   //selectionMode = false // <--- можно тоже с дефолтом
+  
 }: Props) {
-  const imageSource = Array.isArray(event.image_url) && event.image_url.length > 0
-  ? { uri: `${BASE_URL}${event.image_url[0]}` }
-  : null;
+const imageSource =
+  Array.isArray(event.image_url) && event.image_url.length > 0
+    ? {
+        uri: event.image_url[0].startsWith('http')
+          ? event.image_url[0]
+          : `${BASE_URL}${event.image_url[0]}`,
+      }
+    : null;
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -101,7 +109,13 @@ export function EventCard({
   }}
 >
    <TouchableOpacity
-  onPress={onPressDetails}
+  onPress={() => {
+  if (event.category === 'БелГУТ' && event.url) {
+    Linking.openURL(event.url);
+  } else {
+    onPressDetails?.();
+  }
+}}
   onLongPress={onLongPress}
   style={{
     flexDirection: 'row',
@@ -166,8 +180,9 @@ export function EventCard({
                 color: '#101010',
                 fontSize: 16,
                 flex: 1,
+                paddingRight: 32,
               }}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {event.title}
             </Text>
@@ -182,23 +197,31 @@ export function EventCard({
 
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-            <MaterialIcons name="calendar-today" size={16} color="#888" />
-            <Text style={{ marginLeft: 4, color: '#666' }}>
-            {new Date(event.event_date).toLocaleString('ru-RU', {
-              day: 'numeric',
-              month: 'long',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-            </Text>
-          </View>
+<View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+  {event.category !== 'БелГУТ' && (
+    <MaterialIcons name="calendar-today" size={16} color="#888" />
+  )}
+  <Text style={{ marginLeft: event.category !== 'БелГУТ' ? 4 : 0, color: '#666' }}>
+    {event.category === 'БелГУТ'
+      ? `Опубликовано: ${event.event_date}`
+      : new Date(event.event_date).toLocaleString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+  </Text>
+</View>
 
           <Text style={{ color: '#444', marginTop: 4 }}>{event.category}</Text>
 
-          <Text style={{ color: '#888', marginTop: 4 }}>
-  {event.participants_count > 0 ? `Участников: ${event.participants_count}` : 'Пока нет участников'}
-</Text>
+          {event.category === 'БелГУТ' ? (
+  <Text style={{ color: '#888', marginTop: 4 }}>Подробности на сайте</Text>
+) : (
+  <Text style={{ color: '#888', marginTop: 4 }}>
+    {event.participants_count > 0 ? `Участников: ${event.participants_count}` : 'Пока нет участников'}
+  </Text>
+)}
         </View>
       </TouchableOpacity>
       </Animated.View>

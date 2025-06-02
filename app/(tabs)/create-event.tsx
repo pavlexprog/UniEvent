@@ -19,7 +19,7 @@ import { TextInput, Button, Text } from 'react-native-paper';
 import { api } from '../../lib/api';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import PhotoUpload from '@/components/PhotoUpload';
 import EventDateTimePicker from '@/components/EventDateTimePicker';
 import AutoResizeTextInput from '@/components/AutoResizeTextInput';
@@ -249,7 +249,7 @@ export default function CreateEventScreen() {
     }}
   >
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Ionicons name="pricetag-outline" size={18} color="green" style={{ marginRight: 8 }} />
+      <Ionicons name="pricetag-outline" size={18} color='#1e88e5' style={{ marginRight: 8 }} />
       <Text style={{ fontSize: 16, fontWeight: '600', color: "black"}}>Категория</Text>
     </View>
     <Text style={{ fontSize: 14, color: category ? '#000' : '#888' }}>
@@ -299,7 +299,7 @@ export default function CreateEventScreen() {
     backgroundColor:
       !title || !description || !category ||  !eventDate
         ? '#ccc'
-        : '#b23cf6',
+        : '#1e88e5',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -313,20 +313,21 @@ export default function CreateEventScreen() {
 >
   <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>Отправить</Text>
 
-  <Modal
+<Modal
   visible={categoryModalVisible}
   animationType="slide"
   transparent
   onRequestClose={() => setCategoryModalVisible(false)}
 >
-  <TouchableWithoutFeedback onPress={() => setCategoryModalVisible(false)}>
+  <TouchableWithoutFeedback onPress={() => {}}>
     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
       <View
         style={{
           backgroundColor: 'white',
           padding: 24,
           borderRadius: 16,
-          width: '80%',
+          width: '90%',
+          maxHeight: '85%',
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.2,
@@ -334,39 +335,83 @@ export default function CreateEventScreen() {
           elevation: 5,
         }}
       >
-        <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16 }}>Выберите категорию</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16, textAlign: 'center' }}>
+          Выберите категорию
+        </Text>
 
-        {['Концерт', 'Спорт', 'Кино', 'Другое'].map((category) => (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          {[
+            { label: 'Концерт', icon: MaterialCommunityIcons, name: 'music' },
+            { label: 'Спорт', icon: MaterialIcons, name: 'sports-soccer' },
+            { label: 'Кино', icon: MaterialIcons, name: 'movie' },
+            { label: 'Театр', icon: MaterialCommunityIcons, name: 'drama-masks' },
+            { label: 'Образование', icon: MaterialCommunityIcons, name: 'school' },
+            { label: 'Выставка', icon: FontAwesome5, name: 'paint-brush' },
+            { label: 'Другое', icon: MaterialIcons, name: 'more-horiz' },
+          ].map(({ label, icon: IconComponent, name }) => {
+            const isSelected = label === category;
+            return (
+              <TouchableOpacity
+                key={label}
+                onPress={() => setCategory(label)}
+                style={{
+                  width: '47.5%',
+                  backgroundColor: isSelected ? '#3c82f6' : '#f0f0f0',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <IconComponent name={name} size={20} color={isSelected ? 'white' : '#3c82f6'} />
+                <Text style={{ marginLeft: 8, fontSize: 15, color: isSelected ? 'white' : '#333' }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Кнопки OK и Отмена */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
           <TouchableOpacity
-            key={category}
-            onPress={() => {
-              setCategory(category);
-              setCategoryModalVisible(false);
-            }}
+            onPress={() => setCategoryModalVisible(false)}
             style={{
+              flex: 1,
               paddingVertical: 12,
-              paddingHorizontal: 16,
-              backgroundColor: category === category ? '#3c82f6' : '#f5f5f5',
               borderRadius: 10,
-              marginBottom: 10,
+              borderWidth: 1,
+              borderColor: '#3c82f6',
+              marginRight: 8,
+              alignItems: 'center',
             }}
           >
-            <Text style={{ fontSize: 16, color: category === category ? 'white' : '#000' }}>
-              {category}
-            </Text>
+            <Text style={{ color: '#3c82f6', fontWeight: '500' }}>Отмена</Text>
           </TouchableOpacity>
-        ))}
 
-        <TouchableOpacity
-          onPress={() => setCategoryModalVisible(false)}
-          style={{ marginTop: 10, alignSelf: 'flex-end' }}
-        >
-          <Text style={{ color: '#3c82f6', fontWeight: '500' }}>Отмена</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setCategoryModalVisible(false)}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: 10,
+              backgroundColor: '#3c82f6',
+              marginLeft: 8,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: '500' }}>ОК</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   </TouchableWithoutFeedback>
 </Modal>
+
+
+
+
 
 </TouchableOpacity>
       </ScrollView>

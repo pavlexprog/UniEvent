@@ -23,7 +23,7 @@ export function EventSearchBar({ searchValue, onSearchChange, onOpenFilters }: P
           height: 40,
         }}
       >
-        <MaterialIcons name="search" size={20} color="green" />
+        <MaterialIcons name="search" size={20} color='#1e88e5' />
         <TextInput
           placeholder="Поиск мероприятий"
           value={searchValue}
@@ -36,7 +36,7 @@ export function EventSearchBar({ searchValue, onSearchChange, onOpenFilters }: P
 
       {onOpenFilters && (
   <TouchableOpacity onPress={onOpenFilters} style={{ marginLeft: 12 }}>
-    <Text style={{ color: 'green', fontSize: 16, fontWeight: '500' }}>Фильтры</Text>
+    <Text style={{ color: '#1e88e5', fontSize: 16, fontWeight: '500' }}>Фильтры</Text>
   </TouchableOpacity>
 )}
     </View>

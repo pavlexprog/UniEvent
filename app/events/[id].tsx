@@ -10,10 +10,11 @@ import {
   Dimensions,
   SafeAreaView,
   Share,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '../../lib/api';
-import { Event } from '../../types';
+import { Event, FriendshipStatus } from '../../types';
 import { BASE_URL } from '../../lib/config';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FlatList, Modal } from 'react-native';
@@ -21,42 +22,40 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
 import EventOrganizerCard from '@/components/EventOrganizerCard';
+import UserCard from '@/components/UserCard';
+import { useAuthContext } from '@/contexts/AuthContext';
+import CommentItem from '../../components/CommentItem'; // путь подгони под свой проект
+
 const screenWidth = Dimensions.get('window').width;
 
 type EventWithJoined = Event & { joined?: boolean };
 
 export default function EventDetailScreen() {
-  const { id } = useLocalSearchParams();
+
   const router = useRouter();
   //const [isFavorite, setIsFavorite] = useState(false);
-  const [event, setEvent] = useState<EventWithJoined | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [otherEvents, setOtherEvents] = useState<Event[]>([]);
-  const [friends, setFriends] = useState<number[]>([]);
-  const joined = event?.joined ?? false;
+  const { user: authUser } = useAuthContext();
+
   const { toggleFavorite, isFavorite, favorites, fetchFavorites} = useFavorites();
-  const openFullscreen = (index: number) => setSelectedImageIndex(index);
-  const closeFullscreen = () => setSelectedImageIndex(null);
+  //const openFullscreen = (index: number) => setSelectedImageIndex(index);
+  //const closeFullscreen = () => setSelectedImageIndex(null);
 
-  const handleAddFriend = async (userId: number) => {
-  try {
-    await api.post(`/friends/${userId}/add`);
-    setFriends((prev) => [...prev, userId]);
-  } catch (error) {
-    console.error('Ошибка при добавлении в друзья:', error);
-  }
-};
+    const { id } = useLocalSearchParams();
+  const [event, setEvent] = useState<EventWithJoined | null>(null);
 
-const handleRemoveFriend = async (userId: number) => {
-  try {
-    await api.post(`/friends/${userId}/remove`);
-    setFriends((prev) => prev.filter((id) => id !== userId));
-  } catch (error) {
-    console.error('Ошибка при удалении из друзей:', error);
-  }
-};
+  const [friendshipStatus, setFriendshipStatus] =
+    useState<FriendshipStatus>('none');
+  const [mutualFriends, setMutualFriends] = useState(0);
+  
+  const joined = event?.joined ?? false;
+const [commentText, setCommentText] = useState('');
+const [comments, setComments] = useState<{ id: number; text: string; author: string; date: string }[]>([]);
+
 
   const handleToggleFavorite = () => {
     if (!id || Array.isArray(id)) return;
@@ -68,19 +67,9 @@ const handleRemoveFriend = async (userId: number) => {
       fetchFavorites();
     }, [])
   );
+  
 
-  const fetchFriends = async () => {
-  try {
-    const res = await fetch(`/friends`, {
-   
-    });
-    const data = await res.json();
-    const friendIds = data.map((friend: any) => friend.id); // Преобразуем в список ID
-    setFriends(friendIds);
-  } catch (error) {
-    console.error('Ошибка при загрузке друзей:', error);
-  }
-};
+
   
   const fetchEvent = async () => {
     if (!id || Array.isArray(id)) return;
@@ -89,10 +78,29 @@ const handleRemoveFriend = async (userId: number) => {
       const res = await api.get(`/events/${id}`);
       setEvent(res.data);
       //setIsFavorite(res.data.is_favorite);
+      
+if (res.data.creator?.id && res.data.creator.id !== authUser?.id) {
+  const fRes = await api.get(`/friends/status/${res.data.creator.id}`);
+  setFriendshipStatus(fRes.data.status);
+
+  const mRes = await api.get(`/friends/mutual/${res.data.creator.id}`);
+  setMutualFriends(mRes.data.length);
+} else {
+
   
+  setMutualFriends(0);
+}
+
+
+
+
+      //setIsFavorite(res.data.is_favorite);
+
       // другие мероприятия
       if (res.data.creator?.id) {
-        const other = await api.get(`/events?creator_id=${res.data.creator.id}&limit=3`);
+        //const other = await api.get(`/events?creator_id=${res.data.creator.id}&limit=3`);
+        const other = await api.get(`/events?category=${res.data.category}&limit=6`);
+
         setOtherEvents(other.data.filter((e: Event) => e.id !== Number(id)));
       }
     } catch (err) {
@@ -104,25 +112,39 @@ const handleRemoveFriend = async (userId: number) => {
   };
 
  useEffect(() => {
-  fetchFriends();
-  fetchEvent();
-}, [id, favorites]);
-// const handleToggleFavorite = async () => {
-//   if (!id || Array.isArray(id)) return;
 
-//   try {
-//     if (isFavorite) {
-//       await api.post(`/events/${id}/unfavorite`);
-//       setIsFavorite(false);
-//     } else {
-//       await api.post(`/events/${id}/favorite`);
-//       setIsFavorite(true);
-//     }
-//   } catch (error) {
-//     Alert.alert('Ошибка', 'Не удалось обновить избранное');
-//     console.error(error);
-//   }
-// };
+  fetchEvent();
+   //fetchComments(); 
+}, [id, favorites]);
+const fetchComments = async () => {
+  try {
+    const res = await api.get(`/events/${id}/comments`);
+    setComments(res.data); // Предполагается, что это массив комментариев
+  } catch (err) {
+    console.error(err);
+    Alert.alert('Ошибка', 'Не удалось загрузить комментарии');
+  }
+};
+const handleSendRequest = async (uid: number) => {
+    await api.post(`/friends/${uid}`);
+    setFriendshipStatus('outgoing');
+  };
+
+  const handleRemoveFriend = async (uid: number) => {
+    await api.delete(`/friends/${uid}`);
+    setFriendshipStatus('none');
+  };
+
+  const handleAccept = async (uid: number) => {
+    await api.post(`/friends/${uid}/accept`);
+    setFriendshipStatus('friends');
+  };
+
+  const handleCancelRequest = async (uid: number) => {
+    await api.delete(`/friends/${uid}/request`);
+    setFriendshipStatus('none');
+  };
+
 
 
   const handleAttend = async () => {
@@ -227,22 +249,45 @@ const handleRemoveFriend = async (userId: number) => {
         {/* Картинка мероприятия — листаемая и с полноэкранным просмотром */}
 {event.image_url && event.image_url.length > 0 ? (
   <>
-    <FlatList
-      data={event.image_url}
-      horizontal
-      pagingEnabled
-      keyExtractor={(item, index) => index.toString()}
-      renderItem={({ item, index }) => (
-        <TouchableOpacity onPress={() => setSelectedImageIndex(index)}>
-          <Image
-            source={{ uri: `${BASE_URL}${item}` }}
-            style={{ width: screenWidth, height: 240 }}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
-      )}
-      showsHorizontalScrollIndicator={false}
-    />
+   <View>
+  <FlatList
+    data={event.image_url ?? []}
+    horizontal
+    pagingEnabled
+    keyExtractor={(item, index) => index.toString()}
+    onScroll={(e) => {
+      const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+      setCurrentImageIndex(index);
+    }}
+    renderItem={({ item, index }) => (
+      <TouchableOpacity onPress={() => setSelectedImageIndex(index)}>
+        <Image
+          source={{ uri: `${BASE_URL}${item}` }}
+          style={{ width: screenWidth, height: 240 }}
+          resizeMode="cover"
+        />
+      </TouchableOpacity>
+    )}
+    showsHorizontalScrollIndicator={false}
+  />
+
+  {/* Счётчик теперь вне FlatList — не скроллится с картинками */}
+  <View
+    style={{
+      position: 'absolute',
+      bottom: 10,
+      left: 10,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    }}
+  >
+    <Text style={{ color: 'white', fontSize: 14 }}>
+      {currentImageIndex + 1} / {event.image_url?.length ?? 0}
+    </Text>
+  </View>
+</View>
 
     {/* Звезда поверх изображений */}
 {event.is_approved && (
@@ -302,9 +347,11 @@ const handleRemoveFriend = async (userId: number) => {
 
           <Text style={{ fontSize: 16, marginBottom: 4 }}>{event.category}</Text>
 
-          <Text style={{ fontSize: 16, marginBottom: 12 }}>
-          {event.participants_count > 0 ? `Участников: ${event.participants_count}` : 'Пока нет участников'}
-          </Text>
+         <TouchableOpacity onPress={() => router.push(`/events/${event.id}/EventParticipantsScreen`)}>
+  <Text style={{ fontSize: 16, marginBottom: 12, color: '#007AFF' }}>
+    Участников: {event.participants_count}
+  </Text>
+</TouchableOpacity>
 
        
           <View style={{ marginTop: 4, borderTopWidth: 1, borderColor: '#eee', paddingTop: 16 }}>
@@ -312,22 +359,53 @@ const handleRemoveFriend = async (userId: number) => {
   <Text style={{ fontSize: 16, lineHeight: 22, color: '#444' }}>
     {event.description}
   </Text>
-</View>
-        </View>
+    <Text style={{ fontSize: 16, fontWeight: '600', paddingTop: 8,  marginBottom: 8 }}>Организатор</Text>
 
+
+  
+{event.creator && (
+  <View>
+    
+
+<UserCard
+  user={event.creator}
+  friendshipStatus={friendshipStatus}
+  onAccept={() => handleAccept(event.creator.id)}
+  onCancelRequest={() => handleCancelRequest(event.creator.id)}
+  onRemoveFriend={() => handleRemoveFriend(event.creator.id)}
+  onSendRequest={() => handleSendRequest(event.creator.id)}
+ mutualFriendsCount={
+  authUser && event.creator.id !== authUser.id ? mutualFriends : undefined
+}
+  showEventCount
+  showMutualFriends={authUser ? event.creator.id !== authUser.id : false} 
+  isCurrentUser={!!authUser && event.creator.id === authUser.id }
+  labelIfCurrentUser="Это вы"
+/>
+  </View>
+)}
+</View>
+
+        </View>
+{/* 
 {event.creator && (
   <EventOrganizerCard
     creator={event.creator}
-    isFriend={friends.includes(event.creator.id)}
+    friendshipStatus={getFriendshipStatus(event.creator.id)} // 👈 сюда передаёшь статус
     onAddFriend={() => handleAddFriend(event.creator.id)}
     onRemoveFriend={() => handleRemoveFriend(event.creator.id)}
+    onAccept={() => handleAcceptRequest(event.creator.id)}
+    onCancelRequest={() => handleCancelRequest(event.creator.id)}
   />
-)}
+)} */}
+
+
+
 
 
 {otherEvents.length > 0 && event.is_approved && (
   <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
-    <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>Другие мероприятия</Text>
+    <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Другие мероприятия в этой категории</Text>
     {otherEvents.map((e) => (
       <TouchableOpacity
         key={e.id}
@@ -358,6 +436,66 @@ const handleRemoveFriend = async (userId: number) => {
     ))}
   </View>
 )}
+<View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+  <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 12 }}>Комментарии</Text>
+
+  {comments.length === 0 ? (
+    <Text style={{ color: '#888' }}>Пока нет комментариев</Text>
+  ) : (
+    <FlatList
+      data={comments}
+      keyExtractor={(item) => item.id.toString()}
+    renderItem={({ item }) => (
+  <CommentItem author={item.author} text={item.text} date={item.date} />
+)}
+    />
+  )}
+
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+    <TextInput
+      placeholder="Оставить комментарий..."
+      value={commentText}
+      onChangeText={setCommentText}
+      style={{
+        flex: 1,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginRight: 8,
+      }}
+    />
+    <TouchableOpacity
+      onPress={() => {
+        if (commentText.trim()) {
+          setComments((prev) => [
+            ...prev,
+            {
+              id: Date.now(),
+              text: commentText,
+              author: `${authUser?.first_name} ${authUser?.last_name}`,
+              date: new Date().toLocaleString('ru-RU', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            },
+          ]);
+          setCommentText('');
+        }
+      }}
+      style={{
+        backgroundColor: '#2e7d32',
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 8,
+      }}
+    >
+      <Text style={{ color: 'white', fontWeight: 'bold' }}>Отпр.</Text>
+    </TouchableOpacity>
+  </View>
+</View>
       </ScrollView>
      
       
@@ -408,6 +546,9 @@ const handleRemoveFriend = async (userId: number) => {
   </View>
 )}
 
+
+
+
 <Modal visible={selectedImageIndex !== null} transparent={true}>
   <View style={{ flex: 1, backgroundColor: 'black' }}>
     <FlatList
@@ -415,13 +556,19 @@ const handleRemoveFriend = async (userId: number) => {
       horizontal
       pagingEnabled
       initialScrollIndex={selectedImageIndex ?? 0}
+      onScroll={(e) => {
+        const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+        setCurrentImageIndex(index);
+      }}
       keyExtractor={(item, index) => index.toString()}
       renderItem={({ item }) => (
-        <Image
-          source={{ uri: `${BASE_URL}${item}` }}
-          style={{ width: screenWidth, height: '100%' }}
-          resizeMode="contain"
-        />
+        <View>
+          <Image
+            source={{ uri: `${BASE_URL}${item}` }}
+            style={{ width: screenWidth, height: '100%' }}
+            resizeMode="contain"
+          />
+        </View>
       )}
       getItemLayout={(_, index) => ({
         length: screenWidth,
@@ -429,6 +576,23 @@ const handleRemoveFriend = async (userId: number) => {
         index,
       })}
     />
+
+    {/* Счётчик внизу слева */}
+    <View style={{
+      position: 'absolute',
+      bottom: 30,
+      left: 20,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+    }}>
+      <Text style={{ color: 'white', fontSize: 14 }}>
+        {currentImageIndex + 1} / {event.image_url?.length ?? 0}
+      </Text>
+    </View>
+
+    {/* Кнопка закрытия */}
     <TouchableOpacity
       onPress={() => setSelectedImageIndex(null)}
       style={{
@@ -444,6 +608,7 @@ const handleRemoveFriend = async (userId: number) => {
     </TouchableOpacity>
   </View>
 </Modal>
+
 
     
     </SafeAreaView>

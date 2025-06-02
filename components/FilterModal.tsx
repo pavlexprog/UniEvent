@@ -28,7 +28,7 @@ export const FilterModal: React.FC<Props> = ({
   setSortBy,
   onApplyFilters,
 }) => {
-  const categories = ['Концерт', 'Спорт', 'Кино', 'Театр', 'Выставка', 'Образование', 'Другое'];
+  const categories = ['Концерт', 'Спорт', 'Кино', 'Театр', 'Выставка', 'Образование', 'БелГУТ', 'Другое'];
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
