@@ -169,7 +169,7 @@ export default function CreateEventScreen() {
         title,
         description,
         category,
-        event_date: date.toISOString(),
+        event_date: eventDate?.toISOString(),
         image_url: imageUrls,
       };
 

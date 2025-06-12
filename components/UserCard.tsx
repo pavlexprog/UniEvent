@@ -136,11 +136,17 @@ export default function UserCard({
     Общих друзей: {mutualFriendsCount}
   </Text>
 )}
-
         {renderButton()}
       </View>
+      
+
+
+
     </TouchableOpacity>
+    
+    
   );
+  
 }
 
 const styles = StyleSheet.create({

@@ -24,8 +24,8 @@ import React from 'react';
 import EventOrganizerCard from '@/components/EventOrganizerCard';
 import UserCard from '@/components/UserCard';
 import { useAuthContext } from '@/contexts/AuthContext';
-import CommentItem from '../../components/CommentItem'; // путь подгони под свой проект
-
+import CommentItem from '../../components/CommentItem'; 
+import CommentList from '../../components/CommentList'
 const screenWidth = Dimensions.get('window').width;
 
 type EventWithJoined = Event & { joined?: boolean };
@@ -55,6 +55,29 @@ export default function EventDetailScreen() {
   const joined = event?.joined ?? false;
 const [commentText, setCommentText] = useState('');
 const [comments, setComments] = useState<{ id: number; text: string; author: string; date: string }[]>([]);
+const handleDeleteEvent = () => {
+  Alert.alert(
+    'Удаление мероприятия',
+    'Вы уверены, что хотите удалить это мероприятие?',
+    [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/events/${event?.id}`);
+            Alert.alert('Успешно', 'Мероприятие удалено');
+            router.back();  // возвращаемся назад после удаления
+          } catch (err) {
+            console.error(err);
+            Alert.alert('Ошибка', 'Не удалось удалить мероприятие');
+          }
+        },
+      },
+    ]
+  );
+};
 
 
   const handleToggleFavorite = () => {
@@ -288,6 +311,30 @@ const handleSendRequest = async (uid: number) => {
     </Text>
   </View>
 </View>
+{authUser?.is_admin && (
+  <TouchableOpacity
+    style={{
+      position: 'absolute',
+      top: 8,
+      right: 16,
+      backgroundColor: '#fff',
+      borderRadius: 28,
+      padding: 8,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    }}
+    onPress={handleDeleteEvent}
+  >
+    <MaterialIcons
+      name="delete"
+      size={32}
+      color="#e53935"
+    />
+  </TouchableOpacity>
+)}
 
     {/* Звезда поверх изображений */}
 {event.is_approved && (
@@ -359,7 +406,7 @@ const handleSendRequest = async (uid: number) => {
   <Text style={{ fontSize: 16, lineHeight: 22, color: '#444' }}>
     {event.description}
   </Text>
-    <Text style={{ fontSize: 16, fontWeight: '600', paddingTop: 8,  marginBottom: 8 }}>Организатор</Text>
+    <Text style={{ fontSize: 16, fontWeight: '600', paddingTop: 8, marginBottom: 8}}>Организатор</Text>
 
 
   
@@ -436,65 +483,9 @@ const handleSendRequest = async (uid: number) => {
     ))}
   </View>
 )}
-<View style={{ paddingHorizontal: 16, marginTop: 20 }}>
+<View style={{ padding: 16 }}>
   <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 12 }}>Комментарии</Text>
-
-  {comments.length === 0 ? (
-    <Text style={{ color: '#888' }}>Пока нет комментариев</Text>
-  ) : (
-    <FlatList
-      data={comments}
-      keyExtractor={(item) => item.id.toString()}
-    renderItem={({ item }) => (
-  <CommentItem author={item.author} text={item.text} date={item.date} />
-)}
-    />
-  )}
-
-  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
-    <TextInput
-      placeholder="Оставить комментарий..."
-      value={commentText}
-      onChangeText={setCommentText}
-      style={{
-        flex: 1,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginRight: 8,
-      }}
-    />
-    <TouchableOpacity
-      onPress={() => {
-        if (commentText.trim()) {
-          setComments((prev) => [
-            ...prev,
-            {
-              id: Date.now(),
-              text: commentText,
-              author: `${authUser?.first_name} ${authUser?.last_name}`,
-              date: new Date().toLocaleString('ru-RU', {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ]);
-          setCommentText('');
-        }
-      }}
-      style={{
-        backgroundColor: '#2e7d32',
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 8,
-      }}
-    >
-      <Text style={{ color: 'white', fontWeight: 'bold' }}>Отпр.</Text>
-    </TouchableOpacity>
-  </View>
+  <CommentList eventId={Number(id)} />
 </View>
       </ScrollView>
      

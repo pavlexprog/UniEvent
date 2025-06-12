@@ -1,190 +1,241 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { useState } from 'react';
+import { View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { TextInput, Button, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useAuthContext } from '../../contexts/AuthContext'; // убедись, что путь корректен
-import { BASE_URL } from '@/lib/config';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../lib/api';
+import { Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
 export default function RegisterScreen() {
-  const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [repeatPassword, setRepeatPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    password?: string;
+    repeatPassword?: string;
+  }>({});
 
   const router = useRouter();
-  const { login } = useAuthContext();
+  const { register } = useAuthContext();
 
-  const isFormValid =
-    email.trim() &&
-    firstName.trim() &&
-    lastName.trim() &&
-    password &&
-    confirmPassword &&
-    password === confirmPassword;
+  const validate = () => {
+    const newErrors: typeof errors = {};
 
-  const handleRegister = async () => {
-    if (!isFormValid) return;
+    if (!firstName) newErrors.firstName = 'Имя обязательно';
+    if (!lastName) newErrors.lastName = 'Фамилия обязательна';
 
-    setLoading(true);
-    try {
-const response = await fetch(`${BASE_URL}/register`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    username: email, 
-    first_name: firstName,
-    last_name: lastName,
-    password,
-  }),
-});
+    if (!email) newErrors.email = 'Email обязателен';
+    else if (!/^\S+@\S+\.\S+$/.test(email)) newErrors.email = 'Некорректный email';
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Ошибка при регистрации');
-      }
+    if (!password) newErrors.password = 'Пароль обязателен';
+    else if (password.length < 6) newErrors.password = 'Минимум 6 символов';
 
-      // Логиним пользователя автоматически
-      await login(email, password);
-      router.replace('/');
-    } catch (error: any) {
-      Alert.alert('Ошибка', error.message || 'Что-то пошло не так');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    if (repeatPassword !== password) newErrors.repeatPassword = 'Пароли не совпадают';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
+  const handleRegister = async () => {
+    if (!validate()) return;
+
+setLoading(true);
+  try {
+    const response = await api.post('/register', {
+      username: email,
+      first_name: firstName,
+      last_name: lastName,
+      password,
+    });
+
+    // если регистрируем и сразу логиним — можно сразу вызвать login(email, password)
+    // или перекинуть на экран входа
+    router.replace('/');
+  } catch (error) {
+    console.error(error);
+    Alert.alert('Ошибка', 'Не удалось зарегистрироваться');
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Регистрация</Text>
-
-      <TextInput
-        placeholder="Email"
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        textContentType="emailAddress"
-      />
-
-      <TextInput
-        placeholder="Имя"
-        style={styles.input}
-        value={firstName}
-        onChangeText={setFirstName}
-      />
-
-      <TextInput
-        placeholder="Фамилия"
-        style={styles.input}
-        value={lastName}
-        onChangeText={setLastName}
-      />
-
-      <TextInput
-        placeholder="Пароль"
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoCapitalize="none"
-        textContentType="password"
-        autoComplete="off"
-      />
-
-      <View style={styles.hintBox}>
-        <Text style={styles.hint}>• минимум 8 символов</Text>
-        <Text style={styles.hint}>• большая буква</Text>
-        <Text style={styles.hint}>• маленькая буква</Text>
-        <Text style={styles.hint}>• цифра</Text>
+    <ScrollView>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logoWrapper}>
+          <Ionicons name="calendar-outline" size={28} color="#007AFF" />
+          <Text style={styles.logoText}>EventApp</Text>
+        </View>
+        <TouchableOpacity onPress={() => router.replace('/')}>
+          <Ionicons name="close" size={28} color="black" />
+        </TouchableOpacity>
       </View>
 
-      <TextInput
-        placeholder="Повторите пароль"
-        style={styles.input}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        autoCapitalize="none"
-        textContentType="password"
-        autoComplete="off"
-      />
+      {/* Tabs */}
+      <View style={styles.tabs}>
+        <TouchableOpacity onPress={() => router.push('/auth/login')}>
+          <Text style={styles.tab}>Вход</Text>
+        </TouchableOpacity>
+        <Text style={[styles.tab, styles.tabActive]}>Регистрация</Text>
+      </View>
 
-      <TouchableOpacity
-        style={[
-          styles.button,
-          { backgroundColor: isFormValid ? '#6fdba7' : '#ccc' },
-        ]}
-        onPress={handleRegister}
-        disabled={!isFormValid || loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Загрузка...' : 'Зарегистрироваться'}
-        </Text>
-      </TouchableOpacity>
+      {/* Form */}
+      <View style={styles.form}>
+        <TextInput
+          mode="outlined"
+          label="Имя"
+          value={firstName}
+          onChangeText={setFirstName}
+          error={!!errors.firstName}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
+        />
+        {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
 
-      <Text
-        style={styles.link}
-        onPress={() => router.replace('/auth/login')}
-      >
-        Уже есть аккаунт? Войти
-      </Text>
-    </ScrollView>
+        <TextInput
+          mode="outlined"
+          label="Фамилия"
+          value={lastName}
+          onChangeText={setLastName}
+          error={!!errors.lastName}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
+        />
+        {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
+
+        <TextInput
+          mode="outlined"
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          error={!!errors.email}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
+        />
+        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
+        <TextInput
+          mode="outlined"
+          label="Пароль"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!passwordVisible}
+          error={!!errors.password}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
+          right={
+            <TextInput.Icon
+              icon={passwordVisible ? 'eye-off' : 'eye'}
+              onPress={() => setPasswordVisible(!passwordVisible)}
+              forceTextInputFocus={false}
+            />
+          }
+        />
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+        <TextInput
+          mode="outlined"
+          label="Повторите пароль"
+          value={repeatPassword}
+          onChangeText={setRepeatPassword}
+          secureTextEntry={!passwordVisible}
+          error={!!errors.repeatPassword}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
+        />
+        {errors.repeatPassword && <Text style={styles.errorText}>{errors.repeatPassword}</Text>}
+
+        <Button
+          mode="contained"
+          onPress={handleRegister}
+          loading={loading}
+          disabled={loading}
+          style={styles.button}
+          buttonColor="#007AFF"
+        >
+          Зарегистрироваться
+        </Button>
+      </View>
+    </View>
+      </TouchableWithoutFeedback>
+      </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
-    paddingTop: 60,
+    flex: 1,
+    padding: 16,
+    paddingTop: 48,
     backgroundColor: 'white',
-    flexGrow: 1,
   },
   header: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    alignSelf: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: '#fff',
-  },
-  hintBox: {
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  hint: {
-    fontSize: 12,
-    color: '#888',
-  },
-  button: {
-    marginTop: 12,
-    padding: 14,
-    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  link: {
-    marginTop: 16,
-    textAlign: 'center',
-    color: '#1e88e5',
+  logoText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 8,
+  },
+  tabs: {
+    flexDirection: 'row',
+    marginTop: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  tab: {
+    marginRight: 24,
+    fontSize: 18,
+    color: '#888',
+    paddingBottom: 8,
+  },
+  tabActive: {
+    color: '#007AFF',
+    borderBottomWidth: 2,
+    borderBottomColor: '#007AFF',
+    fontWeight: 'bold',
+  },
+  form: {
+    marginTop: 32,
+  },
+  input: {
+    marginBottom: 12,
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 8,
+    marginLeft: 4,
+    fontSize: 13,
+  },
+  button: {
+    marginTop: 8,
+    borderRadius: 8,
   },
 });

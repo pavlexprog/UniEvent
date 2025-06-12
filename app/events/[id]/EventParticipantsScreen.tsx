@@ -15,6 +15,7 @@ export default function EventParticipantsScreen() {
   const [allParticipants, setAllParticipants] = useState<UserWithFriendshipStatus[]>([]);
   const [friendParticipants, setFriendParticipants] = useState<UserWithFriendshipStatus[]>([]);
   const router = useRouter();
+    const { user: authUser } = useAuthContext();
 const { user: currentUser } = useAuthContext();
   useEffect(() => {
      console.log('event_id:', id);
@@ -96,15 +97,17 @@ const handleSendRequest = async (id: number) => {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item }) => (
-          <UserCard
-            user={item}
-            friendshipStatus={tab === 'friends' ? 'friends' : item.friendship_status}
-            onAccept={() => api.post(`/friends/${item.id}/accept`).then(fetchParticipants)}
-            onCancelRequest={() => api.post(`/friends/${item.id}/cancel`).then(fetchParticipants)}
-            onRemoveFriend={() => api.post(`/friends/${item.id}/remove`).then(fetchParticipants)}
-            onSendRequest={() => api.post(`/friends/${item.id}`).then(fetchParticipants)}
-            onPress={() => handleUserPress(item.id)}
-          />
+    <UserCard
+  user={item}
+  friendshipStatus={tab === 'friends' ? 'friends' : item.friendship_status}
+  onAccept={() => api.post(`/friends/${item.id}/accept`).then(fetchParticipants)}
+  onCancelRequest={() => api.post(`/friends/${item.id}/cancel`).then(fetchParticipants)}
+  onRemoveFriend={() => api.post(`/friends/${item.id}/remove`).then(fetchParticipants)}
+  onSendRequest={() => api.post(`/friends/${item.id}`).then(fetchParticipants)}
+  onPress={() => handleUserPress(item.id)}
+  isCurrentUser={!!authUser && item.id === authUser.id}
+  labelIfCurrentUser="Это вы"
+/>
           
         )}
         ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 32 }}>Список пуст</Text>}

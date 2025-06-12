@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { View, Alert } from 'react-native';
-import { TextInput, Button, Text, Card } from 'react-native-paper';
+import { View, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { TextInput, Button, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuthContext } from '../../contexts/AuthContext';
-
+import { Ionicons } from '@expo/vector-icons';
+import { Keyboard, TouchableWithoutFeedback } from 'react-native';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
@@ -32,59 +34,142 @@ export default function LoginScreen() {
       router.replace('/');
     } catch (err) {
       Alert.alert('Ошибка', 'Неверный email или пароль');
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', padding: 16 }}>
-      <Card style={{ padding: 16 }}>
-        <Text style={{ fontSize: 24, marginBottom: 16 }}>Вход</Text>
+    <ScrollView>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logoWrapper}>
+          <Ionicons name="calendar-outline" size={28} color="#007AFF" />
+          <Text style={styles.logoText}>EventApp</Text>
+        </View>
+        <TouchableOpacity onPress={() => router.replace('/')}>
+          <Ionicons name="close" size={28} color="black" />
+        </TouchableOpacity>
+      </View>
 
+      {/* Tabs */}
+      <View style={styles.tabs}>
+        <Text style={[styles.tab, styles.tabActive]}>Вход</Text>
+        <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <Text style={styles.tab}>Регистрация</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Inputs */}
+      <View style={styles.form}>
         <TextInput
+          mode="outlined"
           label="Email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
           error={!!errors.email}
-          style={{ marginBottom: 12 }}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
         />
+        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
         <TextInput
+          mode="outlined"
           label="Пароль"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
+          secureTextEntry={!passwordVisible}
           error={!!errors.password}
-          style={{ marginBottom: 12 }}
+          style={styles.input}
+          outlineColor="#ccc"
+          activeOutlineColor="#007AFF"
+          right={
+            <TextInput.Icon
+              icon={passwordVisible ? 'eye-off' : 'eye'}
+              onPress={() => setPasswordVisible(!passwordVisible)}
+              forceTextInputFocus={false}
+            />
+          }
         />
-
-        {errors.email && (
-          <Text style={{ color: 'red', marginBottom: 4 }}>{errors.email}</Text>
-        )}
-        {errors.password && (
-          <Text style={{ color: 'red', marginBottom: 16 }}>{errors.password}</Text>
-        )}
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
         <Button
           mode="contained"
           onPress={handleLogin}
           loading={loading}
           disabled={loading}
+          style={styles.button}
+          buttonColor="#007AFF"
         >
           Войти
         </Button>
-
-        <Text
-          style={{ marginTop: 16, textAlign: 'center', color: '#1e88e5' }}
-          onPress={() => router.replace('/auth/register')}
-        >
-          Нет аккаунта? Зарегистрироваться
-        </Text>
-      </Card>
+      </View>
     </View>
+    </TouchableWithoutFeedback>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    paddingTop: 48,
+    backgroundColor: 'white',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 8,
+  },
+  tabs: {
+    flexDirection: 'row',
+    marginTop: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  tab: {
+    marginRight: 24,
+    fontSize: 18,
+    color: '#888',
+    paddingBottom: 8,
+  },
+  tabActive: {
+    color: '#007AFF',
+    borderBottomWidth: 2,
+    borderBottomColor: '#007AFF',
+    fontWeight: 'bold',
+  },
+  form: {
+    marginTop: 32,
+  },
+  input: {
+    marginBottom: 12,
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 8,
+    marginLeft: 4,
+    fontSize: 13,
+  },
+  button: {
+    marginTop: 8,
+    borderRadius: 8,
+  },
+});

@@ -42,3 +42,18 @@ export type BsutEvent = {
   date: string;
   event_link: string;
 };
+
+
+export type Comment = {
+  id: number;
+  text: string;
+  created_at: string;
+  parent_id: number | null;
+  event_id: number;
+  author: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    avatar_url?: string;
+  };
+}

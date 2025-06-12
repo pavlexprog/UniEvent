@@ -35,11 +35,11 @@ export const CustomAdminMenu = ({
                 <Text style={styles.text}>Одобрить</Text>
               </TouchableOpacity>
             )}
-            {onEdit && (
+            {/* {onEdit && (
               <TouchableOpacity style={styles.item} onPress={onEdit}>
                 <Text style={styles.text}>Редактировать</Text>
               </TouchableOpacity>
-            )}
+            )} */}
             {onDelete && (
               <TouchableOpacity style={styles.item} onPress={onDelete}>
                 <Text style={[styles.text, { color: 'red' }]}>Удалить</Text>
